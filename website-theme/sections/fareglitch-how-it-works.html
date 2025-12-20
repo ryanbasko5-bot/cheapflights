@@ -1,0 +1,83 @@
+<!--
+  templateType: section
+  label: FareGlitch How It Works
+  isAvailableForNewContent: true
+  description: "Four-step process showing how FareGlitch delivers flight deals"
+-->
+{% dnd_section
+  background_color={{ context.background_color or "#0f172a" }},
+  vertical_alignment="MIDDLE",
+  padding={
+    "top": 80,
+    "bottom": 80
+  }
+%}
+  {% dnd_column
+    width=12,
+    offset=0
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/rich_text"
+        html="<h2 style='text-align: center; margin-bottom: 1rem;'>{{ context.heading or 'How It Works' }}</h2><p style='text-align: center; font-size: 1.25rem; color: #cbd5e1;'>{{ context.subheading or 'Four simple steps to never miss a deal' }}</p>"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+
+  {# Step 1 #}
+  {% dnd_column
+    width=3,
+    offset=0
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/rich_text"
+        html="<div style='text-align: center;'><div style='font-size: 3rem; margin-bottom: 1rem;'>🤖</div><h3 style='color: #667eea; margin-bottom: 0.5rem;'>1. We Scan 24/7</h3><p>Our AI monitors millions of flights across 30+ countries, finding deals the moment they appear.</p></div>"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+
+  {# Step 2 #}
+  {% dnd_column
+    width=3,
+    offset=3
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/rich_text"
+        html="<div style='text-align: center;'><div style='font-size: 3rem; margin-bottom: 1rem;'>📲</div><h3 style='color: #764ba2; margin-bottom: 0.5rem;'>2. Instant SMS Alert</h3><p>Get a text with flight details in your local currency - 1 hour before we post on Instagram.</p></div>"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+
+  {# Step 3 #}
+  {% dnd_column
+    width=3,
+    offset=6
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/rich_text"
+        html="<div style='text-align: center;'><div style='font-size: 3rem; margin-bottom: 1rem;'>⚡</div><h3 style='color: #f093fb; margin-bottom: 0.5rem;'>3. Book Fast</h3><p>You have 60 minutes of exclusive access before 50,000+ Instagram followers see it.</p></div>"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+
+  {# Step 4 #}
+  {% dnd_column
+    width=3,
+    offset=9
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/rich_text"
+        html="<div style='text-align: center;'><div style='font-size: 3rem; margin-bottom: 1rem;'>💰</div><h3 style='color: #10b981; margin-bottom: 0.5rem;'>4. Save Big Money</h3><p>Average savings of $200+ per booking. Most deals sell out in under 3 hours.</p></div>"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}

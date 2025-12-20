@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "FareGlitch",
+    "slug": "fareglitch",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E5BA8"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fareglitch.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Scan QR codes for exclusive flight deals",
+        "NSLocationWhenInUseUsageDescription": "Find flight deals from nearby airports",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1E5BA8"
+      },
+      "package": "com.fareglitch.app",
+      "versionCode": 1,
+      "permissions": [
+        "NOTIFICATIONS",
+        "VIBRATE",
+        "INTERNET"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "notification": {
+      "icon": "./assets/icon.png",
+      "color": "#1E5BA8",
+      "androidMode": "default",
+      "androidCollapsedTitle": "New FareGlitch Deal!"
+    },
+    "plugins": [
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3ac222a8-2392-4330-86fd-66636d00a414"
+      }
+    }
+  }
+}

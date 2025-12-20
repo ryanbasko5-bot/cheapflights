@@ -1,0 +1,46 @@
+<!--
+  templateType: section
+  label: FareGlitch Pricing
+  isAvailableForNewContent: true
+  description: "Single pricing tier for FareGlitch subscription"
+-->
+{% dnd_section
+  background_color={{ context.background_color or "#0f172a" }},
+  padding={
+    "top": 80,
+    "bottom": 80
+  }
+%}
+  {% dnd_column
+    width=12,
+    offset=0
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/rich_text"
+        html="<h2 style='text-align: center; margin-bottom: 3rem;'>Simple Pricing. Huge Savings.</h2>"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+
+  {# Pricing Card #}
+  {% dnd_column
+    width=6,
+    offset=3
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/rich_text"
+        html="<div class='pricing-card' style='background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 2px solid rgba(148, 163, 184, 0.1); border-radius: 24px; padding: 3rem 2rem; text-align: center;'><h3 style='color: #667eea; font-size: 1.5rem; margin-bottom: 1rem;'>Premium Subscriber</h3><div style='font-size: 4rem; font-weight: 700; color: #f1f5f9; margin: 1rem 0;'>$5<span style='font-size: 1.5rem; color: #cbd5e1;'>/month</span></div><p style='color: #cbd5e1; margin-bottom: 2rem;'>Get every deal 1 hour before Instagram</p><ul class='feature-list' style='list-style: none; padding: 0; text-align: left; margin: 2rem 0;'><li style='padding: 0.75rem 0; color: #cbd5e1;'>✓ Unlimited SMS alerts</li><li style='padding: 0.75rem 0; color: #cbd5e1;'>✓ 60-minute exclusive access</li><li style='padding: 0.75rem 0; color: #cbd5e1;'>✓ Currency auto-conversion (30+ countries)</li><li style='padding: 0.75rem 0; color: #cbd5e1;'>✓ Average savings: $200+ per deal</li><li style='padding: 0.75rem 0; color: #cbd5e1;'>✓ Cancel anytime, no commitment</li></ul><p style='color: #94a3b8; font-size: 0.875rem; margin-top: 2rem;'>Works worldwide • USD, EUR, GBP, AUD, CAD & more</p></div>"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/form"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}

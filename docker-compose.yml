@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: fareglitch-db
+    environment:
+      POSTGRES_USER: fareglitch
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: fareglitch
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fareglitch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (for Celery task queue)
+  redis:
+    image: redis:7-alpine
+    container_name: fareglitch-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # FastAPI Application
+  api:
+    build: .
+    container_name: fareglitch-api
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://fareglitch:${DB_PASSWORD:-changeme}@db:5432/fareglitch
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Scanner Service
+  scanner:
+    build: .
+    container_name: fareglitch-scanner
+    command: python -m src.scanner.main --interval 3600
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://fareglitch:${DB_PASSWORD:-changeme}@db:5432/fareglitch
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+  # Celery Worker (optional, for background tasks)
+  # celery:
+  #   build: .
+  #   container_name: fareglitch-celery
+  #   command: celery -A src.tasks worker --loglevel=info
+  #   volumes:
+  #     - .:/app
+  #   environment:
+  #     - DATABASE_URL=postgresql://fareglitch:${DB_PASSWORD:-changeme}@db:5432/fareglitch
+  #     - REDIS_URL=redis://redis:6379/0
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - db
+  #     - redis
+
+volumes:
+  postgres_data:

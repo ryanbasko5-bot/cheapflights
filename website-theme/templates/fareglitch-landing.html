@@ -1,0 +1,168 @@
+<!--
+  templateType: page
+  isAvailableForNewContent: true
+  label: FareGlitch Landing Page
+  screenshotPath: ../images/template-previews/landing-page.png
+-->
+{% extends "./layouts/base.html" %}
+
+{% block header %}
+  {% global_partial path="./partials/header-no-navigation.html" %}
+{% endblock header %}
+
+{% block body %}
+{% dnd_area "dnd_area"
+  label="Main section",
+  class="body-container body-container--landing-page"
+%}
+
+  {# Hero Section #}
+  {% dnd_section
+    background_color="#0f172a",
+    vertical_alignment="MIDDLE"
+  %}
+    {% dnd_column
+      offset=0,
+      width=12
+    %}
+      {% dnd_row
+        padding={
+          "top": 80,
+          "bottom": 80
+        }
+      %}
+        {% dnd_module
+          path="@hubspot/rich_text"
+          html="<div style='text-align: center; color: white;'><h1 style='font-size: 3.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1.5rem;'>Get Flight Deals 1 Hour Before Instagram</h1><p style='font-size: 1.25rem; color: #cbd5e1; margin-bottom: 2rem;'>Join 500+ smart travelers getting exclusive SMS alerts with $200+ average savings per deal. Subscribe in 30 seconds.</p></div>"
+        %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+      {% dnd_row %}
+        {% dnd_module path="@hubspot/form" %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+    {% end_dnd_column %}
+  {% end_dnd_section %}
+
+  {# Stats Section #}
+  {% dnd_section
+    background_color="#0f172a"
+  %}
+    {% dnd_column offset=0, width=4 %}
+      {% dnd_row %}
+        {% dnd_module
+          path="@hubspot/rich_text"
+          html="<div style='text-align: center; padding: 2rem;'><div style='font-size: 3rem; font-weight: 700; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>$200+</div><p style='color: #cbd5e1;'>Avg. Savings Per Deal</p></div>"
+        %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+    {% end_dnd_column %}
+    {% dnd_column offset=4, width=4 %}
+      {% dnd_row %}
+        {% dnd_module
+          path="@hubspot/rich_text"
+          html="<div style='text-align: center; padding: 2rem;'><div style='font-size: 3rem; font-weight: 700; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>60 Min</div><p style='color: #cbd5e1;'>Exclusive Access</p></div>"
+        %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+    {% end_dnd_column %}
+    {% dnd_column offset=8, width=4 %}
+      {% dnd_row %}
+        {% dnd_module
+          path="@hubspot/rich_text"
+          html="<div style='text-align: center; padding: 2rem;'><div style='font-size: 3rem; font-weight: 700; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>500+</div><p style='color: #cbd5e1;'>Smart Travelers</p></div>"
+        %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+    {% end_dnd_column %}
+  {% end_dnd_section %}
+
+  {# How It Works #}
+  {% dnd_section
+    background_color="#0f172a"
+  %}
+    {% dnd_column width=12, offset=0 %}
+      {% dnd_row %}
+        {% dnd_module
+          path="@hubspot/rich_text"
+          html="<h2 style='text-align: center; color: white; margin-bottom: 1rem;'>How It Works</h2><p style='text-align: center; font-size: 1.25rem; color: #cbd5e1; margin-bottom: 3rem;'>Four simple steps to never miss a deal</p>"
+        %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+    {% end_dnd_column %}
+    
+    {% dnd_column width=3, offset=0 %}
+      {% dnd_row %}
+        {% dnd_module
+          path="@hubspot/rich_text"
+          html="<div style='text-align: center; background: rgba(30, 41, 59, 0.5); border-radius: 20px; padding: 2rem; backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.1);'><div style='font-size: 3rem; margin-bottom: 1rem;'>🤖</div><h3 style='color: #667eea; margin-bottom: 0.5rem;'>1. We Scan 24/7</h3><p style='color: #cbd5e1;'>Our AI monitors millions of flights across 30+ countries.</p></div>"
+        %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+    {% end_dnd_column %}
+    
+    {% dnd_column width=3, offset=3 %}
+      {% dnd_row %}
+        {% dnd_module
+          path="@hubspot/rich_text"
+          html="<div style='text-align: center; background: rgba(30, 41, 59, 0.5); border-radius: 20px; padding: 2rem; backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.1);'><div style='font-size: 3rem; margin-bottom: 1rem;'>📲</div><h3 style='color: #764ba2; margin-bottom: 0.5rem;'>2. Instant SMS Alert</h3><p style='color: #cbd5e1;'>Get a text in your local currency - 1 hour early.</p></div>"
+        %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+    {% end_dnd_column %}
+    
+    {% dnd_column width=3, offset=6 %}
+      {% dnd_row %}
+        {% dnd_module
+          path="@hubspot/rich_text"
+          html="<div style='text-align: center; background: rgba(30, 41, 59, 0.5); border-radius: 20px; padding: 2rem; backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.1);'><div style='font-size: 3rem; margin-bottom: 1rem;'>⚡</div><h3 style='color: #f093fb; margin-bottom: 0.5rem;'>3. Book Fast</h3><p style='color: #cbd5e1;'>You have 60 minutes before Instagram followers see it.</p></div>"
+        %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+    {% end_dnd_column %}
+    
+    {% dnd_column width=3, offset=9 %}
+      {% dnd_row %}
+        {% dnd_module
+          path="@hubspot/rich_text"
+          html="<div style='text-align: center; background: rgba(30, 41, 59, 0.5); border-radius: 20px; padding: 2rem; backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.1);'><div style='font-size: 3rem; margin-bottom: 1rem;'>💰</div><h3 style='color: #10b981; margin-bottom: 0.5rem;'>4. Save Big Money</h3><p style='color: #cbd5e1;'>Average $200+ per booking. Most expire in 3 hours.</p></div>"
+        %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+    {% end_dnd_column %}
+  {% end_dnd_section %}
+
+  {# Pricing #}
+  {% dnd_section
+    background_color="#0f172a"
+  %}
+    {% dnd_column width=12, offset=0 %}
+      {% dnd_row %}
+        {% dnd_module
+          path="@hubspot/rich_text"
+          html="<h2 style='text-align: center; color: white; margin-bottom: 3rem;'>Simple Pricing. Huge Savings.</h2>"
+        %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+    {% end_dnd_column %}
+    
+    {% dnd_column width=6, offset=3 %}
+      {% dnd_row %}
+        {% dnd_module
+          path="@hubspot/rich_text"
+          html="<div style='background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 2px solid rgba(148, 163, 184, 0.1); border-radius: 24px; padding: 3rem 2rem; text-align: center;'><h3 style='color: #667eea; font-size: 1.5rem; margin-bottom: 1rem;'>Premium Subscriber</h3><div style='font-size: 4rem; font-weight: 700; color: #f1f5f9; margin: 1rem 0;'>$5<span style='font-size: 1.5rem; color: #cbd5e1;'>/month</span></div><p style='color: #cbd5e1; margin-bottom: 2rem;'>Get every deal 1 hour before Instagram</p><ul style='list-style: none; padding: 0; text-align: left; margin: 2rem 0;'><li style='padding: 0.75rem 0; color: #cbd5e1;'>✓ Unlimited SMS alerts</li><li style='padding: 0.75rem 0; color: #cbd5e1;'>✓ 60-minute exclusive access</li><li style='padding: 0.75rem 0; color: #cbd5e1;'>✓ Currency auto-conversion (30+ countries)</li><li style='padding: 0.75rem 0; color: #cbd5e1;'>✓ Average savings: $200+ per deal</li><li style='padding: 0.75rem 0; color: #cbd5e1;'>✓ Cancel anytime, no commitment</li></ul><p style='color: #94a3b8; font-size: 0.875rem; margin-top: 2rem;'>Works worldwide • USD, EUR, GBP, AUD, CAD & more</p></div>"
+        %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+      {% dnd_row %}
+        {% dnd_module path="@hubspot/form" %}
+        {% end_dnd_module %}
+      {% end_dnd_row %}
+    {% end_dnd_column %}
+  {% end_dnd_section %}
+
+{% end_dnd_area %}
+{% endblock body %}
+
+{% block footer %}
+{% endblock footer %}

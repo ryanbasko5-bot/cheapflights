@@ -1,0 +1,68 @@
+<!--
+  templateType: section
+  label: FareGlitch Recent Deals
+  isAvailableForNewContent: true
+  description: "Showcase recent flight deals with savings and urgency"
+-->
+{% dnd_section
+  background_color={{ context.background_color or "#1e293b" }},
+  padding={
+    "top": 80,
+    "bottom": 80
+  }
+%}
+  {% dnd_column
+    width=12,
+    offset=0
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/rich_text"
+        html="<h2 style='text-align: center; margin-bottom: 0.5rem;'>Recent Deals</h2><p style='text-align: center; color: #f87171; font-size: 1.125rem; margin-bottom: 3rem;'>⚡ All expired - subscribers got them first</p>"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+
+  {# Deal 1 #}
+  {% dnd_column
+    width=4,
+    offset=0
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/rich_text"
+        html="<div style='background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 16px; padding: 2rem;'><div style='display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;'><div><h3 style='font-size: 1.5rem; margin-bottom: 0.25rem;'>SYD → DPS</h3><p style='color: #94a3b8; font-size: 0.875rem;'>Sydney to Bali</p></div><span style='background: #dc2626; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;'>EXPIRED</span></div><div style='margin: 1.5rem 0;'><p style='color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.25rem;'>Normal Price</p><p style='color: #64748b; text-decoration: line-through; font-size: 1.25rem; margin-bottom: 0.5rem;'>$850</p><p style='color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.25rem;'>Deal Price</p><p style='color: #10b981; font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;'>$360</p><p style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 600;'>Savings: $490</p></div><p style='color: #94a3b8; font-size: 0.875rem;'>⏱️ Lasted 2.5 hrs</p></div>"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+
+  {# Deal 2 #}
+  {% dnd_column
+    width=4,
+    offset=4
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/rich_text"
+        html="<div style='background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 16px; padding: 2rem;'><div style='display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;'><div><h3 style='font-size: 1.5rem; margin-bottom: 0.25rem;'>LAX → TYO</h3><p style='color: #94a3b8; font-size: 0.875rem;'>Los Angeles to Tokyo</p></div><span style='background: #dc2626; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;'>EXPIRED</span></div><div style='margin: 1.5rem 0;'><p style='color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.25rem;'>Normal Price</p><p style='color: #64748b; text-decoration: line-through; font-size: 1.25rem; margin-bottom: 0.5rem;'>$1,200</p><p style='color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.25rem;'>Deal Price</p><p style='color: #10b981; font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;'>$645</p><p style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 600;'>Savings: $555</p></div><p style='color: #94a3b8; font-size: 0.875rem;'>⏱️ Lasted 1.5 hrs</p></div>"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+
+  {# Deal 3 #}
+  {% dnd_column
+    width=4,
+    offset=8
+  %}
+    {% dnd_row %}
+      {% dnd_module
+        path="@hubspot/rich_text"
+        html="<div style='background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 16px; padding: 2rem;'><div style='display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;'><div><h3 style='font-size: 1.5rem; margin-bottom: 0.25rem;'>LHR → BKK</h3><p style='color: #94a3b8; font-size: 0.875rem;'>London to Bangkok</p></div><span style='background: #dc2626; color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;'>EXPIRED</span></div><div style='margin: 1.5rem 0;'><p style='color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.25rem;'>Normal Price</p><p style='color: #64748b; text-decoration: line-through; font-size: 1.25rem; margin-bottom: 0.5rem;'>£680</p><p style='color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.25rem;'>Deal Price</p><p style='color: #10b981; font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;'>£298</p><p style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 600;'>Savings: £382</p></div><p style='color: #94a3b8; font-size: 0.875rem;'>⏱️ Lasted 3 hrs</p></div>"
+      %}
+      {% end_dnd_module %}
+    {% end_dnd_row %}
+  {% end_dnd_column %}
+{% end_dnd_section %}

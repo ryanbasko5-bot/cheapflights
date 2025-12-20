@@ -1,0 +1,74 @@
+<!--
+  templateType: page
+  isAvailableForNewContent: true
+  label: Landing page
+  screenshotPath: ../images/template-previews/landing-page.png
+-->
+{% extends "./layouts/base.html" %}
+
+{% block header %}
+  {% global_partial path="./partials/header-no-navigation.html" %}
+{% endblock header %}
+
+{% block body %}
+{% dnd_area "dnd_area"
+  label="Main section",
+  class="body-container body-container--landing-page"
+%}
+
+  {# Hero banner #}
+
+  {% include_dnd_partial
+    path="../sections/hero-banner.html"
+    context={
+      "content": "<h1>Get Flight Deals 1 Hour Before Instagram</h1><p>Join 500+ smart travelers getting exclusive SMS alerts with $200+ average savings per deal. Subscribe in 30 seconds.</p>",
+      "background_color": "#0f172a",
+      "image": "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1920&q=80",
+      "image_alt": "Airplane taking off on runway at sunset"
+    }
+  %}
+
+  {# How It Works Section #}
+
+  {% include_dnd_partial
+    path="../sections/fareglitch-how-it-works.html",
+    context={
+      "background_color": "#0f172a"
+    }
+  %}
+
+  {# Recent Deals Section #}
+
+  {% include_dnd_partial
+    path="../sections/fareglitch-deals.html",
+    context={
+      "background_color": "#1e293b"
+    }
+  %}
+
+  {# Pricing Section #}
+
+  {% include_dnd_partial
+    path="../sections/fareglitch-pricing.html",
+    context={
+      "background_color": "#0f172a"
+    }
+  %}
+
+  {# Call to Action #}
+
+  {% include_dnd_partial
+    path="../sections/call-to-action.html",
+    context={
+      "background_color": "#1e293b",
+      "heading": "Join FareGlitch Today",
+      "text": "Subscribe in 30 seconds. No credit card required now. Start your free trial.",
+      "button_text": "🚀 Get Early Access ($5/mo)"
+    }
+  %}
+
+{% end_dnd_area %}
+{% endblock body %}
+
+{% block footer %}
+{% endblock footer %}
