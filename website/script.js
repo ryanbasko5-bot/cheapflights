@@ -54,7 +54,7 @@ document.getElementById('subscribeForm').addEventListener('submit', async functi
     
     try {
         // Send subscription request to backend
-        const response = await fetch('/api/subscribe', {
+        const response = await fetch('https://cheapflights-production.up.railway.app/api/subscribe', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -130,7 +130,7 @@ async function loadRecentDeals() {
     // This will connect to your backend API in the future
     // For now, deals are hardcoded in HTML
     try {
-        const response = await fetch('/api/deals/recent');
+        const response = await fetch('https://cheapflights-production.up.railway.app/api/deals/recent');
         if (response.ok) {
             const deals = await response.json();
             updateDealsDisplay(deals);
