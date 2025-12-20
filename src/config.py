@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     alert_email_to: Optional[str] = None
     
     # Database
-    database_url: str = "postgresql://user:password@localhost:5432/fareglitch"
+    database_url: str = "sqlite:///./fareglitch.db"
     database_pool_size: int = 10
     
     # API Server
