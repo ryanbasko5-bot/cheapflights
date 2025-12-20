@@ -169,20 +169,20 @@ class ScanLog(Base):
     status = Column(String)  # success, failed, partial
     
     __table_args__ = (
-        Index(\"idx_scan_time\", \"started_at\"),
+        Index("idx_scan_time", "started_at"),
     )
 
 
 class SubscriptionType(str, Enum):
-    \"\"\"Subscription tier types.\"\"\"
-    FREE = \"free\"  # Instagram only
-    SMS_MONTHLY = \"sms_monthly\"  # $5/month unlimited SMS
-    PAY_PER_ALERT = \"pay_per_alert\"  # $2 per alert
+    """Subscription tier types."""
+    FREE = "free"  # Instagram only
+    SMS_MONTHLY = "sms_monthly"  # $5/month unlimited SMS
+    PAY_PER_ALERT = "pay_per_alert"  # $2 per alert
 
 
 class Subscriber(Base):
-    \"\"\"SMS alert subscriber - the core monetization.\"\"\"
-    __tablename__ = \"subscribers\"
+    """SMS alert subscriber - the core monetization."""
+    __tablename__ = "subscribers"
     
     id = Column(Integer, primary_key=True, index=True)
     
@@ -212,22 +212,22 @@ class Subscriber(Base):
     last_alert_sent_at = Column(DateTime)
     
     # Relationships
-    alert_logs = relationship(\"AlertLog\", back_populates=\"subscriber\")
+    alert_logs = relationship("AlertLog", back_populates="subscriber")
     
     __table_args__ = (
-        Index(\"idx_subscriber_active\", \"is_active\", \"subscription_type\"),
-        Index(\"idx_subscriber_phone\", \"phone_number\"),
+        Index("idx_subscriber_active", "is_active", "subscription_type"),
+        Index("idx_subscriber_phone", "phone_number"),
     )
 
 
 class AlertLog(Base):
-    \"\"\"Log of SMS alerts sent (for billing and analytics).\"\"\"
-    __tablename__ = \"alert_logs\"
+    """Log of SMS alerts sent (for billing and analytics)."""
+    __tablename__ = "alert_logs"
     
     id = Column(Integer, primary_key=True, index=True)
     
-    subscriber_id = Column(Integer, ForeignKey(\"subscribers.id\"), nullable=False)
-    deal_id = Column(Integer, ForeignKey(\"deals.id\"), nullable=False)
+    subscriber_id = Column(Integer, ForeignKey("subscribers.id"), nullable=False)
+    deal_id = Column(Integer, ForeignKey("deals.id"), nullable=False)
     
     # SMS Details
     sent_at = Column(DateTime, default=func.now())
@@ -243,9 +243,9 @@ class AlertLog(Base):
     clicked_at = Column(DateTime)
     
     # Relationships
-    subscriber = relationship(\"Subscriber\", back_populates=\"alert_logs\")
+    subscriber = relationship("Subscriber", back_populates="alert_logs")
     
     __table_args__ = (
-        Index(\"idx_alert_sent\", \"sent_at\"),
-        Index(\"idx_alert_subscriber\", \"subscriber_id\", \"sent_at\"),
+        Index("idx_alert_sent", "sent_at"),
+        Index("idx_alert_subscriber", "subscriber_id", "sent_at"),
     )
