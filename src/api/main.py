@@ -96,7 +96,12 @@ class RefundRequest(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup."""
-    init_db()
+    try:
+        init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.warning(f"Database initialization skipped: {e}")
+        # Continue anyway - some endpoints don't need DB
 
 
 @app.get("/")
