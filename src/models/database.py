@@ -152,8 +152,8 @@ class PriceHistory(Base):
 
 
 class ScanLog(Base):
-    \"\"\"Log of scanner runs for monitoring.\"\"\"
-    __tablename__ = \"scan_logs\"
+    """Log of scanner runs for monitoring."""
+    __tablename__ = "scan_logs"
     
     id = Column(Integer, primary_key=True, index=True)
     
