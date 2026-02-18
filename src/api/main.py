@@ -646,15 +646,16 @@ async def api_budget(request: Request):
 
 
 # ----------------------------------------------------------------
-# Background auto-scanner — runs every 8 hours inside the web process
+# Background auto-scanner — scans ALL 26 airports every 3 hours
+# Budget: $100 AUD/month ≈ 7,000 calls (2,000 free + ~5,000 paid)
 # ----------------------------------------------------------------
 _scanner_task = None
 
 # Monthly API call budget tracking
 _api_calls_this_month = 0
 _api_month = None
-FREE_MONTHLY_LIMIT = 2000  # Amadeus free tier
-DAILY_BUDGET = 60  # ~1,800/month leaves buffer
+FREE_MONTHLY_LIMIT = 7000  # 2,000 free + ~$100 AUD of paid calls
+DAILY_BUDGET = 250  # 250/day × 30 = 7,500 (with buffer)
 _api_calls_today = 0
 _api_day = None
 
@@ -692,19 +693,20 @@ def _log_api_usage(calls_made: int):
 
 async def _auto_scan_loop():
     """
-    Background loop that scans 3 airports every 8 hours.
+    Background loop: scans 7 airports every 6 hours (4x/day).
+    All 26 airports covered every single day.
 
     COST BUDGET (staying within 2,000 free calls/month):
-    ┌─────────────────────────────────────────────────┐
-    │ 3 scans/day × 3 airports = 9 Inspiration calls │
-    │ Inspiration API = cached data (cheapest calls)  │
-    │ Price Analysis = only if anomaly found (~rare)  │
-    │ Offers Search = only if analysis confirms deal  │
-    │                                                 │
-    │ Typical day: ~10-20 API calls                   │
-    │ Worst case:  ~60 API calls/day (hard cap)       │
-    │ Monthly:     ~300-600 calls (well under 2,000)  │
-    └─────────────────────────────────────────────────┘
+    ┌───────────────────────────────────────────────────┐
+    │ 4 scans/day × 7 airports = 26 Inspiration calls  │
+    │ Inspiration API = cached data (cheapest calls)    │
+    │ Price Analysis = only if anomaly found (~rare)    │
+    │ Offers Search = only if analysis confirms deal    │
+    │                                                   │
+    │ Typical day: 26-35 API calls                      │
+    │ Busy day:    ~65 API calls (hard cap)             │
+    │ Monthly:     ~900-1,200 calls (under 2,000 free)  │
+    └───────────────────────────────────────────────────┘
     """
     import asyncio
 
@@ -719,14 +721,14 @@ async def _auto_scan_loop():
                     f"Today: {_api_calls_today}/{DAILY_BUDGET}, "
                     f"Month: {_api_calls_this_month}/{FREE_MONTHLY_LIMIT}"
                 )
-                await asyncio.sleep(8 * 60 * 60)
+                await asyncio.sleep(6 * 60 * 60)
                 continue
 
             from src.utils.database import get_db_session as get_db
             from src.scanner.main import FareGlitchScanner
 
             db = next(get_db())
-            origins = get_scan_batch(3)  # Only 3 airports per batch
+            origins = get_scan_batch(7)  # 7 airports per batch
             logger.info(f"⏰ Auto-scan starting: {origins}")
 
             scanner = FareGlitchScanner(db)
@@ -744,8 +746,8 @@ async def _auto_scan_loop():
         except Exception as e:
             logger.error(f"Auto-scan error: {e}", exc_info=True)
 
-        # Wait 8 hours until next scan (3 scans/day)
-        await asyncio.sleep(8 * 60 * 60)
+        # Wait 6 hours until next scan (4 scans/day)
+        await asyncio.sleep(6 * 60 * 60)
 
 
 @app.on_event("startup")
@@ -757,8 +759,8 @@ async def start_auto_scanner():
 
         _scanner_task = asyncio.create_task(_auto_scan_loop())
         logger.info(
-            "⏰ Auto-scanner scheduled (every 8 hours, 3 airports/batch, "
-            f"daily cap {DAILY_BUDGET}, monthly cap {FREE_MONTHLY_LIMIT})"
+            "⏰ Auto-scanner: ALL 26 airports every 3 hours (8x/day), "
+            f"budget cap {DAILY_BUDGET}/day {FREE_MONTHLY_LIMIT}/month"
         )
     else:
         logger.info("⏰ Auto-scanner disabled (not in production mode)")

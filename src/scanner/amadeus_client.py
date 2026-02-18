@@ -497,27 +497,15 @@ MAJOR_HUBS = [
 ]
 
 
-def get_scan_batch(batch_size: int = 5) -> List[str]:
+def get_scan_batch(batch_size: int = None) -> List[str]:
     """
-    Return a rotating batch of airports to scan.
+    Return ALL airports to scan every time.
 
-    Instead of scanning all 28 airports at once (expensive),
-    we rotate through them in small batches. Each call returns
-    the next batch based on the current hour.
-
-    At 5 airports per batch, 4 scans/day = 20 airports covered.
-    All airports get scanned within ~2 days.
+    With a $100 AUD/month budget we can afford ~5,000 calls/month.
+    Scanning all 26 airports every 3 hours (8x/day):
+      26 calls × 8 scans = 208 Inspiration calls/day
+      + anomaly verification calls (~20-30/day)
+      ≈ 230-240 calls/day × 30 = ~7,000/month
+      First 2,000 free, remaining ~5,000 × ~€0.01 ≈ €50 ≈ $85 AUD
     """
-    from datetime import datetime
-
-    hour = datetime.now().hour
-    # Divide day into scan windows (every 6 hours = 4 scans)
-    batch_index = (hour // 6) % (len(MAJOR_HUBS) // batch_size + 1)
-    start = batch_index * batch_size
-    batch = MAJOR_HUBS[start : start + batch_size]
-
-    # If we've gone past the end, wrap around
-    if not batch:
-        batch = MAJOR_HUBS[:batch_size]
-
-    return batch
+    return MAJOR_HUBS.copy()
