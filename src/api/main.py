@@ -42,6 +42,7 @@ except ImportError:
 from src.models.database import Deal, DealUnlock, DealStatus, Subscriber, SubscriptionType
 from src.utils.database import get_db_session, init_db
 from src.hubspot.integration import HubSpotIntegration
+from src.scanner.amadeus_client import PriceAnomalyDetector, MAJOR_HUBS, get_scan_batch
 from src.validator.duffel_client import DuffelValidator
 from src.api.auth import (
     get_current_subscriber,
@@ -578,6 +579,189 @@ async def readiness_check():
         "status": "ready",
         "timestamp": datetime.utcnow().isoformat()
     }
+
+
+# ----------------------------------------------------------------
+# Scan endpoint — trigger a scan via API (protected by secret key)
+# ----------------------------------------------------------------
+@app.post("/admin/scan")
+async def trigger_scan(
+    request: Request,
+    batch_size: int = Query(default=5, le=10, description="Airports per batch (max 10)"),
+    db: Session = Depends(get_db_session),
+):
+    """
+    Trigger a cost-conscious scan.
+
+    - Rotates through airports in small batches (default 5)
+    - Only hits expensive APIs when cheap APIs find candidates
+    - Protected by API_SECRET_KEY in Authorization header
+
+    Typical cost: ~5-15 API calls per scan (Inspiration is cached/free)
+    """
+    # Auth check — must provide the secret key
+    auth = request.headers.get("Authorization", "")
+    if auth != f"Bearer {settings.api_secret_key}":
+        raise HTTPException(status_code=403, detail="Invalid secret key")
+
+    from src.scanner.main import FareGlitchScanner
+
+    origins = get_scan_batch(batch_size)
+    logger.info(f"🔍 Scan triggered for batch: {origins}")
+
+    scanner = FareGlitchScanner(db)
+    result = await scanner.run_scan(origins=origins)
+
+    # Track API usage
+    estimated_calls = len(origins) + (result.get("anomalies_found", 0) * 2)
+    _log_api_usage(estimated_calls)
+
+    return {
+        "status": "scan_complete",
+        "batch_scanned": origins,
+        "batch_size": len(origins),
+        "total_hubs": len(MAJOR_HUBS),
+        "api_budget": {
+            "calls_today": _api_calls_today,
+            "daily_limit": DAILY_BUDGET,
+            "calls_this_month": _api_calls_this_month,
+            "monthly_limit": FREE_MONTHLY_LIMIT,
+        },
+        **result,
+    }
+
+
+@app.get("/admin/budget")
+async def api_budget(request: Request):
+    """Check your Amadeus API call budget (no auth needed — read only)."""
+    _track_api_budget()
+    return {
+        "calls_today": _api_calls_today,
+        "daily_limit": DAILY_BUDGET,
+        "calls_this_month": _api_calls_this_month,
+        "monthly_limit": FREE_MONTHLY_LIMIT,
+        "remaining_today": max(0, DAILY_BUDGET - _api_calls_today),
+        "remaining_this_month": max(0, FREE_MONTHLY_LIMIT - _api_calls_this_month),
+    }
+
+
+# ----------------------------------------------------------------
+# Background auto-scanner — runs every 8 hours inside the web process
+# ----------------------------------------------------------------
+_scanner_task = None
+
+# Monthly API call budget tracking
+_api_calls_this_month = 0
+_api_month = None
+FREE_MONTHLY_LIMIT = 2000  # Amadeus free tier
+DAILY_BUDGET = 60  # ~1,800/month leaves buffer
+_api_calls_today = 0
+_api_day = None
+
+
+def _track_api_budget():
+    """Reset daily/monthly counters and check if we're within budget."""
+    global _api_calls_this_month, _api_month, _api_calls_today, _api_day
+
+    now = datetime.utcnow()
+
+    # Reset monthly counter on 1st of month
+    if _api_month != now.month:
+        _api_calls_this_month = 0
+        _api_month = now.month
+        logger.info(f"📊 Monthly API counter reset for month {now.month}")
+
+    # Reset daily counter at midnight
+    if _api_day != now.day:
+        _api_calls_today = 0
+        _api_day = now.day
+
+    return _api_calls_today < DAILY_BUDGET and _api_calls_this_month < FREE_MONTHLY_LIMIT
+
+
+def _log_api_usage(calls_made: int):
+    """Record API calls used in this scan."""
+    global _api_calls_this_month, _api_calls_today
+    _api_calls_today += calls_made
+    _api_calls_this_month += calls_made
+    logger.info(
+        f"📊 API budget: {_api_calls_today}/{DAILY_BUDGET} today, "
+        f"{_api_calls_this_month}/{FREE_MONTHLY_LIMIT} this month"
+    )
+
+
+async def _auto_scan_loop():
+    """
+    Background loop that scans 3 airports every 8 hours.
+
+    COST BUDGET (staying within 2,000 free calls/month):
+    ┌─────────────────────────────────────────────────┐
+    │ 3 scans/day × 3 airports = 9 Inspiration calls │
+    │ Inspiration API = cached data (cheapest calls)  │
+    │ Price Analysis = only if anomaly found (~rare)  │
+    │ Offers Search = only if analysis confirms deal  │
+    │                                                 │
+    │ Typical day: ~10-20 API calls                   │
+    │ Worst case:  ~60 API calls/day (hard cap)       │
+    │ Monthly:     ~300-600 calls (well under 2,000)  │
+    └─────────────────────────────────────────────────┘
+    """
+    import asyncio
+
+    # Wait 2 minutes after startup before first scan
+    await asyncio.sleep(120)
+
+    while True:
+        try:
+            if not _track_api_budget():
+                logger.warning(
+                    f"⚠️ API budget exhausted — skipping scan. "
+                    f"Today: {_api_calls_today}/{DAILY_BUDGET}, "
+                    f"Month: {_api_calls_this_month}/{FREE_MONTHLY_LIMIT}"
+                )
+                await asyncio.sleep(8 * 60 * 60)
+                continue
+
+            from src.utils.database import get_db_session as get_db
+            from src.scanner.main import FareGlitchScanner
+
+            db = next(get_db())
+            origins = get_scan_batch(3)  # Only 3 airports per batch
+            logger.info(f"⏰ Auto-scan starting: {origins}")
+
+            scanner = FareGlitchScanner(db)
+            result = await scanner.run_scan(origins=origins)
+
+            # Estimate API calls made:
+            # 1 per origin (Inspiration) + 2 per anomaly (Analysis + Offers)
+            estimated_calls = len(origins) + (result.get("anomalies_found", 0) * 2)
+            _log_api_usage(estimated_calls)
+
+            logger.info(
+                f"⏰ Auto-scan done: {result.get('anomalies_found', 0)} anomalies, "
+                f"{result.get('deals_validated', 0)} validated"
+            )
+        except Exception as e:
+            logger.error(f"Auto-scan error: {e}", exc_info=True)
+
+        # Wait 8 hours until next scan (3 scans/day)
+        await asyncio.sleep(8 * 60 * 60)
+
+
+@app.on_event("startup")
+async def start_auto_scanner():
+    """Start the background scanner if in production."""
+    global _scanner_task
+    if settings.is_production:
+        import asyncio
+
+        _scanner_task = asyncio.create_task(_auto_scan_loop())
+        logger.info(
+            "⏰ Auto-scanner scheduled (every 8 hours, 3 airports/batch, "
+            f"daily cap {DAILY_BUDGET}, monthly cap {FREE_MONTHLY_LIMIT})"
+        )
+    else:
+        logger.info("⏰ Auto-scanner disabled (not in production mode)")
 
 
 if __name__ == "__main__":

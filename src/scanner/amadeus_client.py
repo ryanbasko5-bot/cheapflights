@@ -483,17 +483,41 @@ class PriceAnomalyDetector:
 
 # Pre-defined list of major airport hubs to scan
 MAJOR_HUBS = [
+    # 🇦🇺 Australia (primary market)
+    "SYD", "MEL", "BNE", "PER", "ADL", "OOL", "CBR",
+
     # US Major Hubs
-    "JFK", "EWR", "LGA",  # New York
-    "LAX", "SFO",  # California
-    "ORD",  # Chicago
-    "MIA", "FLL",  # Florida
-    "DFW", "IAH",  # Texas
-    "SEA", "BOS", "DCA",
-    
+    "JFK", "LAX", "SFO", "ORD", "MIA", "DFW", "SEA",
+
     # European Hubs
     "LHR", "CDG", "FRA", "AMS", "MAD",
-    
-    # Asian Hubs
-    "NRT", "HND", "ICN", "HKG", "SIN",
+
+    # Asian Hubs (popular from AU)
+    "NRT", "HND", "ICN", "HKG", "SIN", "BKK", "DPS",
 ]
+
+
+def get_scan_batch(batch_size: int = 5) -> List[str]:
+    """
+    Return a rotating batch of airports to scan.
+
+    Instead of scanning all 28 airports at once (expensive),
+    we rotate through them in small batches. Each call returns
+    the next batch based on the current hour.
+
+    At 5 airports per batch, 4 scans/day = 20 airports covered.
+    All airports get scanned within ~2 days.
+    """
+    from datetime import datetime
+
+    hour = datetime.now().hour
+    # Divide day into scan windows (every 6 hours = 4 scans)
+    batch_index = (hour // 6) % (len(MAJOR_HUBS) // batch_size + 1)
+    start = batch_index * batch_size
+    batch = MAJOR_HUBS[start : start + batch_size]
+
+    # If we've gone past the end, wrap around
+    if not batch:
+        batch = MAJOR_HUBS[:batch_size]
+
+    return batch
