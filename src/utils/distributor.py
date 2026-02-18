@@ -70,7 +70,7 @@ class DealDistributor:
 {deal['origin']}→{deal['destination']}
 {formatted_price}
 Depart: {deal['departure_date']}
-Book: fareglitch.com"""
+Book: fareglitch.com.au"""
         
         print(f"\n📱 Sending to {subscriber_phone}")
         print(f"   Original: {deal['price']} {deal['currency']}")

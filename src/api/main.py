@@ -103,9 +103,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Production: Restrict to specific domains
 ALLOWED_ORIGINS = {
     "production": [
-        "https://fareglitch.com",
-        "https://www.fareglitch.com",
-        "https://api.fareglitch.com"
+        "https://fareglitch.com.au",
+        "https://www.fareglitch.com.au",
+        "https://api.fareglitch.com.au"
     ],
     "development": [
         "http://localhost:3000",

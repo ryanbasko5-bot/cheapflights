@@ -66,7 +66,7 @@ try:
 {deal['origin']}→{deal['destination']}
 ${int(deal['price'])} {deal['currency']}
 Depart: {deal['departure_date']}
-Book: fareglitch.com"""
+Book: fareglitch.com.au"""
         
         print(f"\n📱 SMS MESSAGE ({len(message)} chars):")
         print("-"*40)

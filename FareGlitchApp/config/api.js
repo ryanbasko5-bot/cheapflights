@@ -3,7 +3,7 @@
 
 const API_BASE_URL = __DEV__ 
   ? 'http://localhost:8000'  // Local development
-  : 'https://cheapflights-production.up.railway.app';  // Production
+  : 'https://api.fareglitch.com.au';  // Production
 
 export const API_ENDPOINTS = {
   deals: {
