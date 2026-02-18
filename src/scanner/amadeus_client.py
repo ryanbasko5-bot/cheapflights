@@ -1,8 +1,14 @@
 """
-Amadeus API Client
+Amadeus Multi-API Client
 
-Wrapper for Amadeus Flight Inspiration Search API.
-Uses cached data to find price anomalies without aggressive live scraping.
+Uses 3 Amadeus APIs together for robust mistake fare detection:
+
+1. Flight Inspiration Search  → Cast a wide net (cached prices, cheap)
+2. Flight Offers Search       → Confirm deal is bookable right now (live)
+3. Flight Price Analysis      → Verify price is abnormally low (analytics)
+
+Pipeline: Inspiration finds candidates → Offers confirms they're real →
+          Price Analysis proves they're actually anomalies.
 """
 import logging
 from typing import List, Optional, Dict, Any
@@ -17,101 +23,224 @@ logger = logging.getLogger(__name__)
 
 class AmadeusScanner:
     """
-    Amadeus API client for finding mistake fares.
-    
-    Uses the "Flight Inspiration Search" endpoint which returns cached pricing
-    data, avoiding the Look-to-Book ratio issues with live search APIs.
+    Multi-API Amadeus client for finding and verifying mistake fares.
     """
-    
+
     def __init__(self):
         """Initialize Amadeus client."""
         self.client = Client(
             client_id=settings.amadeus_api_key,
             client_secret=settings.amadeus_api_secret,
-            hostname="test" if settings.amadeus_env == "test" else "production"
+            hostname="test" if settings.amadeus_env == "test" else "production",
         )
-        
+
+    # ------------------------------------------------------------------
+    # API 1: Flight Inspiration Search (cached, cheap, wide net)
+    # ------------------------------------------------------------------
     def search_inspiration(
         self,
         origin: str,
         max_price: Optional[int] = None,
         departure_date_start: Optional[str] = None,
         departure_date_end: Optional[str] = None,
-        destination: Optional[str] = None
+        destination: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Use Flight Inspiration Search API - queries CACHED data, not live inventory.
-        This is the legal "loophole" - we're filtering market intelligence, not scraping.
-        
-        Args:
-            origin: IATA airport code (e.g., "SYD", "JFK")
-            max_price: Maximum price to filter by
-            departure_date_start: YYYY-MM-DD format (optional)
-            departure_date_end: YYYY-MM-DD format (optional)
-            destination: Specific destination (optional)
-            
-        Returns:
-            List of destination pricing data from Amadeus cache
+        Flight Inspiration Search — returns CACHED pricing data.
+        Low cost, no look-to-book concerns. Casts a wide net.
         """
         try:
-            # Use Flight INSPIRATION Search (cached data, not live inventory)
             params = {"origin": origin}
             if max_price:
                 params["maxPrice"] = max_price
             if destination:
                 params["destination"] = destination
             if departure_date_start:
-                params["departureDate"] = f"{departure_date_start},{departure_date_end or departure_date_start}"
-                
-            # This endpoint returns CACHED prices found by other users
-            # It does NOT hit airline reservation systems directly
+                params["departureDate"] = (
+                    f"{departure_date_start},{departure_date_end or departure_date_start}"
+                )
+
             response = self.client.shopping.flight_destinations.get(**params)
-            
+
             if response.data:
-                logger.info(f"📊 Inspiration API: Found {len(response.data)} cached destinations from {origin}")
+                logger.info(
+                    f"📊 Inspiration API: {len(response.data)} destinations from {origin}"
+                )
                 return [self._parse_flight_destination(item) for item in response.data]
             return []
-            
+
         except ResponseError as error:
-            logger.error(f"Amadeus API error: {error}")
+            logger.error(f"Inspiration API error for {origin}: {error}")
             return []
-            
-    def search_flight_inspiration(
+
+    # ------------------------------------------------------------------
+    # API 1b: Flight Cheapest Date Search (cached, date-level prices)
+    # ------------------------------------------------------------------
+    def search_cheapest_dates(
         self,
         origin: str,
-        destination: Optional[str] = None,
-        max_price: Optional[int] = None
+        destination: str,
     ) -> List[Dict[str, Any]]:
         """
-        Search for flight inspiration (cached pricing trends).
-        
-        Args:
-            origin: IATA airport code
-            destination: Optional destination IATA code
-            max_price: Maximum price filter
-            
-        Returns:
-            List of flight pricing data
+        Flight Cheapest Date Search — cached date-level pricing.
+        Useful to find the absolute cheapest travel dates for a route.
         """
         try:
-            params = {"origin": origin}
-            if destination:
-                params["destination"] = destination
-            if max_price:
-                params["maxPrice"] = max_price
-                
-            # Use Flight Inspiration Search - returns cached data
-            response = self.client.shopping.flight_dates.get(**params)
-            
+            response = self.client.shopping.flight_dates.get(
+                origin=origin, destination=destination
+            )
             if response.data:
-                logger.info(f"Found {len(response.data)} flight options from {origin}")
+                logger.info(
+                    f"📅 Cheapest Dates: {len(response.data)} dates for {origin}→{destination}"
+                )
                 return [self._parse_flight_date(item) for item in response.data]
             return []
-            
+
         except ResponseError as error:
-            logger.error(f"Amadeus API error: {error}")
+            logger.error(f"Cheapest Dates API error {origin}→{destination}: {error}")
             return []
-            
+
+    # ------------------------------------------------------------------
+    # API 2: Flight Offers Search (live inventory — confirms bookability)
+    # ------------------------------------------------------------------
+    def verify_offer_exists(
+        self,
+        origin: str,
+        destination: str,
+        departure_date: str,
+        return_date: Optional[str] = None,
+        adults: int = 1,
+        max_results: int = 3,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Flight Offers Search — hits LIVE inventory.
+        Use sparingly (costs more, affects look-to-book ratio).
+        Only call this to verify a candidate from Inspiration API.
+
+        Returns the cheapest live offer if found, or None.
+        """
+        try:
+            params = {
+                "originLocationCode": origin,
+                "destinationLocationCode": destination,
+                "departureDate": departure_date,
+                "adults": adults,
+                "max": max_results,
+                "currencyCode": "USD",
+            }
+            if return_date:
+                params["returnDate"] = return_date
+
+            response = self.client.shopping.flight_offers_search.get(**params)
+
+            if response.data:
+                cheapest = response.data[0]
+                price = float(cheapest["price"]["total"])
+                airline = (
+                    cheapest.get("validatingAirlineCodes", ["??"])[0]
+                )
+                segments = cheapest.get("itineraries", [{}])[0].get("segments", [])
+                cabin = "economy"
+                if segments:
+                    cabin = (
+                        segments[0]
+                        .get("travelerPricings", [{}])[0]
+                        .get("fareDetailsBySegment", [{}])[0]
+                        .get("cabin", "ECONOMY")
+                        if "travelerPricings" in cheapest
+                        else "economy"
+                    )
+                    # Try to extract cabin from the offer itself
+                    for tp in cheapest.get("travelerPricings", []):
+                        for fd in tp.get("fareDetailsBySegment", []):
+                            cabin = fd.get("cabin", "ECONOMY").lower()
+                            break
+                        break
+
+                logger.info(
+                    f"✈️  Live Offer: {origin}→{destination} ${price} ({airline})"
+                )
+                return {
+                    "origin": origin,
+                    "destination": destination,
+                    "departure_date": departure_date,
+                    "return_date": return_date,
+                    "price": price,
+                    "currency": cheapest["price"].get("currency", "USD"),
+                    "airline": airline,
+                    "cabin_class": cabin,
+                    "offer_id": cheapest.get("id"),
+                    "bookable": True,
+                    "raw_offer": cheapest,
+                }
+            return None
+
+        except ResponseError as error:
+            logger.error(f"Offers Search error {origin}→{destination}: {error}")
+            return None
+
+    # ------------------------------------------------------------------
+    # API 3: Flight Price Analysis (is this price abnormally low?)
+    # ------------------------------------------------------------------
+    def analyze_price(
+        self,
+        origin: str,
+        destination: str,
+        departure_date: str,
+        one_way: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Flight Price Analysis — returns min/max/median historical pricing.
+        Tells you whether a price is ACTUALLY a deal vs just normally cheap.
+
+        Returns price analysis data or None.
+        """
+        try:
+            params = {
+                "originIataCode": origin,
+                "destinationIataCode": destination,
+                "departureDate": departure_date,
+            }
+            if one_way:
+                params["oneWay"] = "true"
+
+            response = self.client.analytics.itinerary_price_metrics.get(**params)
+
+            if response.data:
+                metrics = response.data[0]
+                price_metrics = {}
+                for pm in metrics.get("priceMetrics", []):
+                    quartile = pm.get("quartileRanking")
+                    amount = float(pm.get("amount", 0))
+                    price_metrics[quartile] = amount
+
+                result = {
+                    "origin": origin,
+                    "destination": destination,
+                    "departure_date": departure_date,
+                    "currency": metrics.get("currencyCode", "USD"),
+                    "price_first_quartile": price_metrics.get("FIRST", 0),
+                    "price_median": price_metrics.get("MEDIUM", 0),
+                    "price_third_quartile": price_metrics.get("THIRD", 0),
+                    "price_minimum": price_metrics.get("MINIMUM", 0),
+                    "price_maximum": price_metrics.get("MAXIMUM", 0),
+                }
+                logger.info(
+                    f"📈 Price Analysis {origin}→{destination}: "
+                    f"min=${result['price_minimum']} median=${result['price_median']} "
+                    f"max=${result['price_maximum']}"
+                )
+                return result
+
+            return None
+
+        except ResponseError as error:
+            logger.error(f"Price Analysis error {origin}→{destination}: {error}")
+            return None
+
+    # ------------------------------------------------------------------
+    # Parsers
+    # ------------------------------------------------------------------
     def _parse_flight_destination(self, data: Dict) -> Dict[str, Any]:
         """Parse flight destination response."""
         return {
@@ -122,9 +251,9 @@ class AmadeusScanner:
             "return_date": data.get("returnDate"),
             "price": float(data.get("price", {}).get("total", 0)),
             "currency": data.get("price", {}).get("currency", "USD"),
-            "links": data.get("links", {})
+            "links": data.get("links", {}),
         }
-        
+
     def _parse_flight_date(self, data: Dict) -> Dict[str, Any]:
         """Parse flight date response."""
         return {
@@ -140,64 +269,137 @@ class AmadeusScanner:
 
 class PriceAnomalyDetector:
     """
-    Detects price anomalies by comparing cached inspiration data to historical averages.
-    
-    This is the "Market Intelligence" filter - we're not scraping, we're analyzing
-    publicly available cached data from Amadeus to identify pricing anomalies.
+    3-API Pipeline for detecting verified mistake fares.
+
+    Step 1: Inspiration API → find cheap candidates (cached, cheap calls)
+    Step 2: Price Analysis API → is this price abnormally low? (analytics)
+    Step 3: Offers Search API → confirm it's actually bookable right now (live)
+
+    Only deals that pass ALL 3 checks get published.
     """
-    
+
     def __init__(self, db_session):
-        """
-        Initialize detector with database session.
-        
-        Args:
-            db_session: SQLAlchemy session for price history lookups
-        """
         self.db = db_session
         self.scanner = AmadeusScanner()
-        
+
     async def scan_routes(
         self,
         origins: List[str],
         min_savings: int = None,
-        threshold: float = None
+        threshold: float = None,
     ) -> List[Dict[str, Any]]:
-        """
-        Scan multiple origin airports for price anomalies.
-        
-        Args:
-            origins: List of IATA airport codes to scan
-            min_savings: Minimum dollar savings to flag (default from config)
-            threshold: Price drop percentage threshold (default from config)
-            
-        Returns:
-            List of detected anomalies
-        """
+        """Scan multiple origins through the 3-API pipeline."""
         min_savings = min_savings or settings.min_savings_amount
         threshold = threshold or settings.price_drop_threshold
-        
+
         anomalies = []
-        
+
         for origin in origins:
-            logger.info(f"🔍 Querying Amadeus Inspiration API for {origin}...")
-            
-            # Get CACHED prices from Inspiration API (not live scraping)
+            logger.info(f"🔍 Step 1: Inspiration API for {origin}...")
+
+            # --- STEP 1: Cast wide net with Inspiration API (cached) ---
             destinations = self.scanner.search_inspiration(origin)
-            
+
             for dest_data in destinations:
-                anomaly = await self._check_for_anomaly(
-                    dest_data,
-                    min_savings=min_savings,
-                    threshold=threshold
+                candidate = await self._check_for_anomaly(
+                    dest_data, min_savings=min_savings, threshold=threshold
                 )
-                
-                if anomaly:
-                    anomalies.append(anomaly)
-                    logger.warning(
-                        f"🚨 ANOMALY DETECTED: {anomaly['route']} - "
-                        f"${anomaly['current_price']} (normally ${anomaly['historical_avg']})"
+                if not candidate:
+                    continue
+
+                dep_date = candidate.get("departure_date")
+                dest = candidate["destination"]
+
+                # --- STEP 2: Price Analysis — is this actually abnormal? ---
+                if dep_date:
+                    logger.info(f"📈 Step 2: Price Analysis for {origin}→{dest}...")
+                    analysis = self.scanner.analyze_price(origin, dest, dep_date)
+
+                    if analysis:
+                        median = analysis.get("price_median", 0)
+                        minimum = analysis.get("price_minimum", 0)
+                        current = candidate["current_price"]
+
+                        candidate["price_median"] = median
+                        candidate["price_minimum"] = minimum
+                        candidate["price_maximum"] = analysis.get("price_maximum", 0)
+
+                        # If price is above the median, it's not a deal
+                        if median > 0 and current >= median:
+                            logger.info(
+                                f"  ↳ Skipped: ${current} >= median ${median}"
+                            )
+                            continue
+
+                        # Calculate how far below median
+                        if median > 0:
+                            pct_below_median = (median - current) / median
+                            candidate["pct_below_median"] = pct_below_median
+                            logger.info(
+                                f"  ↳ {int(pct_below_median*100)}% below median ✅"
+                            )
+
+                # --- STEP 3: Live verification — is it bookable? ---
+                if dep_date:
+                    logger.info(f"✈️  Step 3: Live verify {origin}→{dest}...")
+                    live_offer = self.scanner.verify_offer_exists(
+                        origin,
+                        dest,
+                        dep_date,
+                        return_date=candidate.get("return_date"),
                     )
-                    
+
+                    if live_offer:
+                        # Update candidate with live data
+                        candidate["current_price"] = live_offer["price"]
+                        candidate["airline"] = live_offer.get("airline")
+                        candidate["cabin_class"] = live_offer.get("cabin_class")
+                        candidate["bookable"] = True
+                        candidate["booking_link"] = (
+                            f"https://www.google.com/travel/flights?"
+                            f"q=flights+from+{origin}+to+{dest}+on+{dep_date}"
+                        )
+
+                        # Recalculate savings with live price
+                        historical = candidate["historical_avg"]
+                        live_price = live_offer["price"]
+                        candidate["savings_amount"] = historical - live_price
+                        candidate["savings_percentage"] = (
+                            (historical - live_price) / historical
+                            if historical > 0
+                            else 0
+                        )
+
+                        # Final check — still meets thresholds?
+                        if (
+                            candidate["savings_amount"] >= min_savings
+                            and candidate["savings_percentage"] >= threshold
+                        ):
+                            logger.warning(
+                                f"🚨 VERIFIED DEAL: {candidate['route']} - "
+                                f"${live_price} (normally ${historical}, "
+                                f"save {int(candidate['savings_percentage']*100)}%) "
+                                f"[{live_offer.get('airline', '??')}]"
+                            )
+                            anomalies.append(candidate)
+                        else:
+                            logger.info(
+                                f"  ↳ Live price ${live_price} no longer meets thresholds"
+                            )
+                    else:
+                        logger.info(f"  ↳ Not bookable — skipping")
+                else:
+                    # No departure date — can't verify, use historical check only
+                    anomalies.append(candidate)
+                    logger.warning(
+                        f"🚨 ANOMALY (unverified): {candidate['route']} - "
+                        f"${candidate['current_price']}"
+                    )
+
+                # Small delay between API calls to stay within rate limits
+                import asyncio
+                await asyncio.sleep(1)
+
         return anomalies
         
     async def _check_for_anomaly(

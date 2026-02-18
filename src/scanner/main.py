@@ -207,6 +207,10 @@ class FareGlitchScanner:
         route_desc = f"{anomaly_data['origin']} to {anomaly_data['destination']}"
         savings_pct = int(anomaly_data['savings_percentage'] * 100)
         
+        airline = anomaly_data.get("airline", "")
+        cabin = anomaly_data.get("cabin_class", "economy")
+        booking_link = anomaly_data.get("booking_link", "")
+
         deal = Deal(
             deal_number=f"DEAL#{deal_num:03d}",
             origin=anomaly_data["origin"],
@@ -220,8 +224,13 @@ class FareGlitchScanner:
             detected_at=datetime.now(),
             validated_at=datetime.now(),
             status=DealStatus.VALIDATED,
-            teaser_headline=f"Mistake Fare: {route_desc} ({savings_pct}% Off)",
-            teaser_description=f"Normally ${int(anomaly_data['historical_avg'])}, now ${int(anomaly_data['current_price'])}",
+            teaser_headline=f"{'✈️ ' + airline + ' ' if airline else ''}Mistake Fare: {route_desc} ({savings_pct}% Off)",
+            teaser_description=(
+                f"Normally ${int(anomaly_data['historical_avg'])}, "
+                f"now ${int(anomaly_data['current_price'])}"
+                f"{' on ' + airline if airline else ''}"
+                f" ({cabin})" if cabin else ""
+            ),
             unlock_fee=settings.unlock_fee_default
         )
         
@@ -241,7 +250,13 @@ class FareGlitchScanner:
             "normal_price": anomaly["historical_avg"],
             "savings": anomaly["savings_amount"],
             "savings_pct": f"{int(anomaly['savings_percentage'] * 100)}%",
-            "currency": anomaly["currency"]
+            "currency": anomaly["currency"],
+            "airline": anomaly.get("airline"),
+            "cabin_class": anomaly.get("cabin_class"),
+            "bookable": anomaly.get("bookable", False),
+            "booking_link": anomaly.get("booking_link"),
+            "departure_date": anomaly.get("departure_date"),
+            "pct_below_median": anomaly.get("pct_below_median"),
         }
 
 
