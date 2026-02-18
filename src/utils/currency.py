@@ -1,8 +1,137 @@
 """
-Currency converter based on phone number country code
+Currency utilities - Handle currency conversion and local currency detection
+
+Maps airport codes and phone numbers to their local currency.
 """
 import requests
 from typing import Dict
+
+# Airport to currency mapping (based on country)
+AIRPORT_CURRENCY_MAP = {
+    # United States
+    'JFK': 'USD', 'LAX': 'USD', 'SFO': 'USD', 'ORD': 'USD', 'MIA': 'USD',
+    'DFW': 'USD', 'ATL': 'USD', 'BOS': 'USD', 'SEA': 'USD', 'LAS': 'USD',
+    
+    # United Kingdom
+    'LHR': 'GBP', 'LGW': 'GBP', 'MAN': 'GBP', 'EDI': 'GBP', 'BHX': 'GBP',
+    
+    # European Union (Euro)
+    'CDG': 'EUR', 'ORY': 'EUR',  # Paris
+    'FRA': 'EUR', 'MUC': 'EUR',  # Germany
+    'AMS': 'EUR',  # Amsterdam
+    'MAD': 'EUR', 'BCN': 'EUR',  # Spain
+    'FCO': 'EUR', 'MXP': 'EUR',  # Italy
+    'VIE': 'EUR',  # Vienna
+    'BRU': 'EUR',  # Brussels
+    'DUB': 'EUR',  # Dublin
+    'ATH': 'EUR',  # Athens
+    'LIS': 'EUR',  # Lisbon
+    
+    # Australia
+    'SYD': 'AUD', 'MEL': 'AUD', 'BNE': 'AUD', 'PER': 'AUD', 'ADL': 'AUD',
+    
+    # Canada
+    'YYZ': 'CAD', 'YVR': 'CAD', 'YUL': 'CAD', 'YYC': 'CAD',
+    
+    # Asia
+    'HKG': 'HKD',  # Hong Kong
+    'SIN': 'SGD',  # Singapore
+    'NRT': 'JPY', 'HND': 'JPY',  # Tokyo
+    'ICN': 'KRW',  # Seoul
+    'PVG': 'CNY', 'PEK': 'CNY',  # China
+    'DEL': 'INR', 'BOM': 'INR',  # India
+    'BKK': 'THB',  # Bangkok
+    'KUL': 'MYR',  # Kuala Lumpur
+    'CGK': 'IDR',  # Jakarta
+    'MNL': 'PHP',  # Manila
+    
+    # Middle East
+    'DXB': 'AED', 'AUH': 'AED',  # UAE
+    'DOH': 'QAR',  # Doha
+    'TLV': 'ILS',  # Tel Aviv
+    
+    # Other
+    'DPS': 'IDR',  # Bali
+    'AKL': 'NZD',  # Auckland
+    'CPT': 'ZAR', 'JNB': 'ZAR',  # South Africa
+    'GRU': 'BRL', 'GIG': 'BRL',  # Brazil
+    'MEX': 'MXN',  # Mexico City
+}
+
+# Currency symbols for display
+CURRENCY_SYMBOLS = {
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'AUD': 'A$',
+    'CAD': 'C$',
+    'JPY': '¥',
+    'HKD': 'HK$',
+    'SGD': 'S$',
+    'NZD': 'NZ$',
+    'CNY': '¥',
+    'INR': '₹',
+    'KRW': '₩',
+    'THB': '฿',
+    'MYR': 'RM',
+    'IDR': 'Rp',
+    'PHP': '₱',
+    'AED': 'AED',
+    'QAR': 'QAR',
+    'ILS': '₪',
+    'ZAR': 'R',
+    'BRL': 'R$',
+    'MXN': 'MX$',
+}
+
+
+def get_currency_for_airport(airport_code: str) -> str:
+    """
+    Get the local currency for an airport code.
+    
+    Args:
+        airport_code: 3-letter IATA airport code
+        
+    Returns:
+        Currency code (e.g., 'USD', 'EUR', 'GBP')
+    """
+    return AIRPORT_CURRENCY_MAP.get(airport_code.upper(), 'USD')
+
+
+def get_currency_symbol(currency_code: str) -> str:
+    """
+    Get the display symbol for a currency code.
+    
+    Args:
+        currency_code: Currency code (e.g., 'USD', 'EUR')
+        
+    Returns:
+        Currency symbol (e.g., '$', '€')
+    """
+    return CURRENCY_SYMBOLS.get(currency_code, currency_code)
+
+
+def format_price(amount: float, currency_code: str) -> str:
+    """
+    Format a price with the appropriate currency symbol.
+    
+    Args:
+        amount: Price amount
+        currency_code: Currency code
+        
+    Returns:
+        Formatted price string (e.g., '$450', '€380')
+    """
+    symbol = get_currency_symbol(currency_code)
+    
+    # Special formatting for certain currencies
+    if currency_code in ['JPY', 'KRW']:  # No decimals
+        return f"{symbol}{int(amount):,}"
+    elif currency_code in ['IDR']:  # Thousands separator
+        return f"{symbol}{int(amount):,}"
+    else:
+        return f"{symbol}{amount:,.2f}"
+
 
 # Phone code to currency mapping
 PHONE_CODE_TO_CURRENCY = {
@@ -39,7 +168,7 @@ def get_currency_from_phone(phone_number: str) -> str:
         Currency code (e.g., 'AUD')
     """
     # Try exact matches first (e.g., +852 for Hong Kong)
-    for code in ['+852', '+886', '+886']:
+    for code in ['+852', '+886']:
         if phone_number.startswith(code):
             return PHONE_CODE_TO_CURRENCY[code]
     

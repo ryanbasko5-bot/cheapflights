@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test - FareGlitch</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #1E5BA8; }
+        .status { font-weight: bold; margin: 10px 0; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+        button {
+            background: #1E5BA8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #4A9FDB; }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 FareGlitch API Connection Test</h1>
+    
+    <div class="test-box">
+        <h2>Current Configuration</h2>
+        <div id="config"></div>
+    </div>
+    
+    <div class="test-box">
+        <h2>Tests</h2>
+        <button onclick="testAPIConnection()">Test API Connection</button>
+        <button onclick="testDeals()">Test Get Deals</button>
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <div id="results"></div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        // Display configuration
+        document.getElementById('config').innerHTML = `
+            <div class="status info">API URL: ${API_BASE_URL}</div>
+            <div class="status info">Current Page: ${window.location.href}</div>
+            <div class="status info">Hostname: ${window.location.hostname}</div>
+        `;
+
+        async function testAPIConnection() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testing API connection...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/`);
+                const data = await response.json();
+                
+                results.innerHTML = `
+                    <div class="status success">✅ API Connection Successful!</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="status error">❌ API Connection Failed</div>
+                    <div class="status error">Error: ${error.message}</div>
+                    <p>Troubleshooting:</p>
+                    <ul>
+                        <li>Check that the API is running on port 8000</li>
+                        <li>In Codespaces, make sure port 8000 is set to Public</li>
+                        <li>Check browser console (F12) for CORS errors</li>
+                    </ul>
+                `;
+            }
+        }
+
+        async function testDeals() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Fetching deals...</p>';
+            
+            try {
+                const deals = await window.fareglitchAPI.getActiveDeals();
+                
+                results.innerHTML = `
+                    <div class="status success">✅ Successfully fetched ${deals.length} deal(s)!</div>
+                    <pre>${JSON.stringify(deals, null, 2)}</pre>
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="status error">❌ Failed to fetch deals</div>
+                    <div class="status error">Error: ${error.message}</div>
+                `;
+            }
+        }
+
+        async function testLogin() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testing login with premium@test.com...</p>';
+            
+            try {
+                const result = await window.fareglitchAPI.login('premium@test.com', '+61411111111');
+                
+                results.innerHTML = `
+                    <div class="status success">✅ Login Successful!</div>
+                    <div class="status info">Premium Member: ${result.subscriber.is_premium}</div>
+                    <div class="status info">Token: ${result.access_token.substring(0, 20)}...</div>
+                    <pre>${JSON.stringify(result.subscriber, null, 2)}</pre>
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <div class="status error">❌ Login Failed</div>
+                    <div class="status error">Error: ${error.message}</div>
+                `;
+            }
+        }
+
+        async function runAllTests() {
+            await testAPIConnection();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testDeals();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testLogin();
+        }
+
+        // Auto-run on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(testAPIConnection, 500);
+        });
+    </script>
+</body>
+</html>

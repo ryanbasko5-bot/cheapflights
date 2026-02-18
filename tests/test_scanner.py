@@ -5,7 +5,7 @@ Tests the core functionality of the price anomaly detection system.
 """
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, MagicMock, patch, AsyncMock
 
 from src.scanner.amadeus_client import AmadeusScanner, PriceAnomalyDetector
 from src.models.database import Deal, PriceHistory, DealStatus
@@ -21,10 +21,10 @@ class TestAmadeusScanner:
         return AmadeusScanner()
         
     @patch('src.scanner.amadeus_client.Client')
-    def test_search_cheapest_destinations(self, mock_client, scanner):
+    def test_search_cheapest_destinations(self, mock_client_class, scanner):
         """Test searching for cheapest destinations."""
         # Mock API response
-        mock_response = Mock()
+        mock_response = MagicMock()
         mock_response.data = [
             {
                 "type": "flight-destination",
@@ -36,9 +36,12 @@ class TestAmadeusScanner:
             }
         ]
         
-        scanner.client.shopping.flight_destinations.get.return_value = mock_response
+        # Setup mock client
+        mock_client = MagicMock()
+        mock_client.shopping.flight_destinations.get.return_value = mock_response
+        scanner.client = mock_client
         
-        results = scanner.search_cheapest_destinations("JFK")
+        results = scanner.search_inspiration("JFK")
         
         assert len(results) == 1
         assert results[0]["origin"] == "JFK"

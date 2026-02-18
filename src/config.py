@@ -14,7 +14,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        case_sensitive=False
+        case_sensitive=False,
+        extra="ignore"  # Ignore extra environment variables
     )
     
     # Amadeus API
@@ -29,8 +30,8 @@ class Settings(BaseSettings):
     kiwi_api_key: Optional[str] = None
     
     # HubSpot
-    hubspot_api_key: str
-    hubspot_portal_id: str
+    hubspot_api_key: Optional[str] = None
+    hubspot_portal_id: Optional[str] = None
     
     # Slack Notifications
     slack_webhook_url: Optional[str] = None
@@ -59,6 +60,7 @@ class Settings(BaseSettings):
     
     # Deal Configuration (Alert Model)
     alert_fee: float = 5.00  # Pay to receive SMS alert
+    unlock_fee_default: float = 7.00  # Default unlock fee for deals
     instagram_delay_hours: int = 1  # Post to Instagram 1hr after SMS
     deal_expiry_hours: int = 48
     
@@ -67,11 +69,22 @@ class Settings(BaseSettings):
     sinch_api_token: Optional[str] = None
     sinch_phone_number: Optional[str] = None
     
+    # SMS Configuration (Twilio - alternative)
+    twilio_account_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    twilio_phone_number: Optional[str] = None
+    your_phone_number: Optional[str] = None
+    
     # Feature Flags
     enable_auto_publish: bool = False
     enable_sms_alerts: bool = True
     enable_instagram_posting: bool = True
+    enable_slack_alerts: bool = False
+    enable_glitch_guarantee: bool = True
     debug_mode: bool = False
+    
+    # Monitoring
+    sentry_dsn: Optional[str] = None
     
     @property
     def is_production(self) -> bool:

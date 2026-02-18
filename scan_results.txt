@@ -1,0 +1,4 @@
+  File "/workspaces/cheapflights/exhaustive_scanner.py", line 248
+    for i, deal in enumerate(all_deals[:20], 1):
+    ^
+IndentationError: expected an indented block after 'for' statement on line 246

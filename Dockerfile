@@ -7,9 +7,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     postgresql-client \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
+# Copy requirements first (better layer caching)
 COPY requirements.txt .
 
 # Install Python dependencies
@@ -25,5 +26,9 @@ USER fareglitch
 # Expose API port
 EXPOSE 8000
 
-# Default command - use PORT env var from Railway
-CMD uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+
+# Production entrypoint: run migrations then start server
+CMD ["bash", "prod_start.sh"]

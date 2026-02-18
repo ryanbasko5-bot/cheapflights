@@ -75,9 +75,9 @@ nano .env
 ### 2.2 Fill in `.env` file
 
 ```env
-# Amadeus API (Required) - ALREADY CONFIGURED ✅
-AMADEUS_API_KEY=n1WIwFBdQhRCMBfA6ltPylciu1CwFoIg
-AMADEUS_API_SECRET=K1G5UAWhv8tG5v9a
+# Amadeus API (Required) - copy from your .env file
+AMADEUS_API_KEY=<copy from your .env>
+AMADEUS_API_SECRET=<copy from your .env>
 
 # Sinch SMS (Required) - GET FROM dashboard.sinch.com
 SINCH_SERVICE_PLAN_ID=your_service_plan_id_here

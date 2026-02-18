@@ -146,8 +146,19 @@ class FareGlitchScanner:
                         hubspot = HubSpotIntegration()
                         await hubspot.publish_deal(deal)
                         published_count += 1
+                        
+                    # AUTO-UPDATE WEBSITE with new deal
+                    try:
+                        from src.hubspot.website_updater import auto_update_website
+                        website_result = auto_update_website([deal])
+                        if website_result.get("hubdb_updated"):
+                            logger.info(f"🌐 Website updated with {deal.deal_number}")
+                        if website_result.get("blog_posts_created"):
+                            logger.info(f"📝 Blog post created for {deal.deal_number}")
+                    except Exception as e:
+                        logger.warning(f"Website update failed (non-critical): {e}")
                 else:
-                    logger.info(f"[TEST MODE] Would send SMS for: {deal.teaser_headline}\")
+                    logger.info(f"[TEST MODE] Would send SMS for: {deal.teaser_headline}")
                     
             scan_log.deals_published = published_count
             scan_log.status = "success"
@@ -266,17 +277,17 @@ async def main():
         scanner = FareGlitchScanner(db)
         result = await scanner.run_scan(origins=args.origins, test_mode=args.test)
         
-        print("\n" + "="*60)
-        print("SCAN RESULTS")
-        print("="*60)
-        print(f"Anomalies Found: {result['anomalies_found']}")
-        print(f"Deals Validated: {result['deals_validated']}")
-        print(f"Deals Published: {result['deals_published']}")
+        logger.info("="*60)
+        logger.info("SCAN RESULTS")
+        logger.info("="*60)
+        logger.info(f"Anomalies Found: {result['anomalies_found']}")
+        logger.info(f"Deals Validated: {result['deals_validated']}")
+        logger.info(f"Deals Published: {result['deals_published']}")
         
-        if result.get('deals'):
-            print("\nVALIDATED DEALS:")
-            for deal in result['deals']:
-                print(f"  • {deal['route']}: ${deal['current_price']} (Save {deal['savings_pct']})")
+        if result.get('validated_deals'):
+            logger.info("VALIDATED DEALS:")
+            for deal in result['validated_deals']:
+                logger.info(f"  • {deal['route']}: ${deal['current_price']} (Save {deal['savings_pct']})")
 
 
 if __name__ == "__main__":

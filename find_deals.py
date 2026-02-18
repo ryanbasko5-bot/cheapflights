@@ -154,6 +154,6 @@ except Exception as e:
                 price = float(response.data[0]['price']['total'])
                 print(f"   ✅ Found! ${price}")
                 break
-        except:
-            print(f"   ❌ No data for {dest}")
+        except Exception as e:
+            print(f"   ❌ No data for {dest}: {str(e)}")
             continue

@@ -1,0 +1,382 @@
+<!-- 
+=====================================================
+RECENT DEALS - AUTO-UPDATING MODULE
+=====================================================
+
+HOW TO ADD THIS TO YOUR HUBSPOT PAGE:
+
+METHOD 1: Rich Text Module (Easiest - 2 minutes)
+-------------------------------------------------
+1. Go to your HubSpot page editor (any page you want deals on)
+2. Click the (+) "Add" button where you want deals to appear
+3. Select "Rich text" module
+4. Click the "<>" (source code) button in the toolbar
+5. Copy and paste THIS ENTIRE FILE
+6. Save and publish
+
+The deals will auto-update when your scanner finds new ones!
+
+METHOD 2: Global Module (Add to multiple pages)
+------------------------------------------------
+1. Design Manager → Create → Module → "Recent Deals"
+2. Paste this code
+3. Now you can add "Recent Deals" to ANY page
+4. Updates appear on all pages automatically!
+
+NOTE: Replace YOUR_TABLE_ID with your actual table ID from setup script
+-->
+
+{% set table_id = "YOUR_TABLE_ID" %}
+{% set deals = hubdb_table_rows(table_id, "orderBy=-created_at&limit=6") %}
+
+<div class="fareglitch-deals-section">
+  <div class="section-header">
+    <h2 class="deals-title">🚨 Live Mistake Fares</h2>
+    <p class="deals-subtitle">Auto-updated when new deals are found</p>
+  </div>
+
+  <div class="deals-grid">
+    {% for row in deals %}
+      {% if row.status == "active" or row.status == "published" %}
+      <div class="deal-card">
+        <!-- Status Badge -->
+        <div class="deal-badge">
+          <span class="badge-live">● LIVE</span>
+          <span class="badge-savings">{{ row.savings_pct }}% OFF</span>
+        </div>
+
+        <!-- Route -->
+        <div class="deal-route">
+          <h3>{{ row.origin }} → {{ row.destination }}</h3>
+          <p class="route-name">{{ row.route }}</p>
+        </div>
+
+        <!-- Pricing -->
+        <div class="deal-pricing">
+          <div class="price-comparison">
+            <div class="old-price">
+              <span class="label">Normal</span>
+              <span class="amount">${{ row.normal_price|round }}</span>
+            </div>
+            <div class="arrow">→</div>
+            <div class="new-price">
+              <span class="label">Deal</span>
+              <span class="amount">${{ row.deal_price|round }}</span>
+            </div>
+          </div>
+          
+          <div class="savings">
+            <span class="savings-amount">Save ${{ row.savings|round }}</span>
+          </div>
+        </div>
+
+        <!-- Expiry -->
+        {% if row.expires_at %}
+        <div class="deal-expiry">
+          ⏰ Expires {{ row.expires_at|datetimeformat('%B %d, %I:%M %p') }}
+        </div>
+        {% endif %}
+
+        <!-- CTA -->
+        <a href="#subscribe-section" class="deal-cta">
+          Get Booking Details →
+        </a>
+      </div>
+      {% endif %}
+    {% endfor %}
+    
+    <!-- No Active Deals Message -->
+    {% if deals|length == 0 %}
+    <div class="no-deals">
+      <p>🔍 Scanning for deals...</p>
+      <p>Subscribe to get alerts when we find them!</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+/* Main Container */
+.fareglitch-deals-section {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  padding: 60px 20px;
+  border-radius: 0;
+}
+
+/* Section Header */
+.section-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.deals-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.deals-subtitle {
+  color: #94a3b8;
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+/* Deals Grid */
+.deals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Deal Card */
+.deal-card {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.deal-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.deal-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(148, 163, 184, 0.4);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.deal-card:hover::before {
+  opacity: 1;
+}
+
+/* Badges */
+.deal-badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.badge-live {
+  color: #10b981;
+  font-weight: 600;
+  font-size: 0.875rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.badge-savings {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  color: white;
+  padding: 0.375rem 0.875rem;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+/* Route */
+.deal-route {
+  margin-bottom: 1.5rem;
+}
+
+.deal-route h3 {
+  font-size: 1.75rem;
+  color: #f1f5f9;
+  margin: 0 0 0.25rem 0;
+  font-weight: 700;
+}
+
+.route-name {
+  color: #94a3b8;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* Pricing */
+.deal-pricing {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.price-comparison {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.old-price, .new-price {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.old-price .label, .new-price .label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.old-price .amount {
+  font-size: 1.25rem;
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.new-price .amount {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.arrow {
+  font-size: 1.5rem;
+  color: #94a3b8;
+}
+
+.savings {
+  text-align: center;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.savings-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Expiry */
+.deal-expiry {
+  color: #94a3b8;
+  font-size: 0.875rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+}
+
+/* CTA Button */
+.deal-cta {
+  display: block;
+  width: 100%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 0.875rem 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.deal-cta:hover {
+  background: linear-gradient(135deg, #764ba2, #667eea);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+  color: white;
+  text-decoration: none;
+}
+
+/* No Deals State */
+.no-deals {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 16px;
+  border: 2px dashed rgba(148, 163, 184, 0.2);
+}
+
+.no-deals p {
+  color: #94a3b8;
+  font-size: 1.125rem;
+  margin: 0.5rem 0;
+}
+
+.no-deals p:first-child {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .deals-title {
+    font-size: 2rem;
+  }
+  
+  .deals-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .price-comparison {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .arrow {
+    transform: rotate(90deg);
+  }
+}
+</style>
+
+<!-- 
+=====================================================
+CUSTOMIZATION OPTIONS
+=====================================================
+
+Change Colors:
+- Purple gradient: #667eea → #764ba2
+- Pink gradient: #f093fb → #f5576c  
+- Green (prices): #10b981
+- Dark bg: #0f172a, #1e293b
+
+Change Layout:
+- 2 columns: grid-template-columns: repeat(2, 1fr);
+- 3 columns: grid-template-columns: repeat(3, 1fr);
+- 1 column: grid-template-columns: 1fr;
+
+Change Number of Deals Shown:
+- Line 17: limit=6 (change to limit=3, limit=10, etc.)
+
+Show Only Active Deals:
+- Line 17: Add "&status=active" to query
+
+Sort Options:
+- Newest first: orderBy=-created_at
+- Biggest savings: orderBy=-savings
+- Expiring soon: orderBy=expires_at
+-->

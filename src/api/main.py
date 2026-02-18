@@ -6,34 +6,127 @@ Provides:
 - Webhook endpoints for HubSpot
 - Admin API for deal management
 """
+import logging
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi import FastAPI, Depends, HTTPException, status, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from src.config import settings
-from src.models.database import Deal, DealUnlock, DealStatus
+
+# Initialize Sentry for production error tracking
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+
+    if settings.is_production and getattr(settings, "sentry_dsn", None):
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            integrations=[FastApiIntegration(), SqlalchemyIntegration()],
+            traces_sample_rate=0.2,
+            environment=settings.amadeus_env,
+        )
+        logging.getLogger(__name__).info("Sentry initialized for production")
+except ImportError:
+    pass  # sentry-sdk not installed; skip
+from src.models.database import Deal, DealUnlock, DealStatus, Subscriber, SubscriptionType
 from src.utils.database import get_db_session, init_db
 from src.hubspot.integration import HubSpotIntegration
 from src.validator.duffel_client import DuffelValidator
+from src.api.auth import (
+    get_current_subscriber,
+    get_optional_subscriber,
+    is_premium_member,
+    can_see_deal,
+    create_access_token,
+    generate_magic_link_token
+)
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup/shutdown events."""
+    # Startup
+    try:
+        # Run DB init and validate required environment in production
+        init_db()
+        logger.info("Database initialized successfully")
+        try:
+            # Import local validator which loads .env and checks required vars
+            from check_env import validate_env
+
+            if settings.is_production:
+                validate_env()
+            else:
+                # In non-production, just check but don't exit
+                missing_req, missing_opt = validate_env(return_missing=True)
+                if missing_req:
+                    logger.warning(f"Missing required env vars (dev): {missing_req}")
+        except Exception as e:
+            logger.debug(f"Env validation skipped or failed: {e}")
+    except Exception as e:
+        logger.warning(f"Database initialization skipped: {e}")
+    yield
+    # Shutdown
+    logger.info("Shutting down FareGlitch API")
+
 
 # Initialize FastAPI app
 app = FastAPI(
     title="FareGlitch API",
     description="Mistake fare detection and gated marketplace API",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
-# CORS middleware
+# Rate limiter setup
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS middleware - Configure based on environment
+# Development: Allow all origins for testing
+# Production: Restrict to specific domains
+ALLOWED_ORIGINS = {
+    "production": [
+        "https://fareglitch.com",
+        "https://www.fareglitch.com",
+        "https://api.fareglitch.com"
+    ],
+    "development": [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000"
+    ],
+    "test": ["*"]
+}
+
+# Get appropriate origins based on environment
+cors_origins = ALLOWED_ORIGINS.get(
+    settings.amadeus_env,
+    ALLOWED_ORIGINS["development"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly in production
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    max_age=3600  # Cache preflight requests for 1 hour
 )
 
 
@@ -52,9 +145,26 @@ class DealTeaserResponse(BaseModel):
     cabin_class: Optional[str]
     unlock_fee: float
     expires_at: Optional[datetime]
+    published_at: Optional[datetime]
+    origin: Optional[str]
+    destination: Optional[str]
+    booking_link: Optional[str] = None
     
     class Config:
         from_attributes = True
+
+
+class LoginRequest(BaseModel):
+    """Login request with email/phone."""
+    email: EmailStr
+    phone_number: Optional[str] = None
+
+
+class LoginResponse(BaseModel):
+    """Login response with JWT token."""
+    access_token: str
+    token_type: str = "bearer"
+    subscriber: dict
 
 
 class DealFullResponse(BaseModel):
@@ -93,20 +203,10 @@ class RefundRequest(BaseModel):
 
 # API Endpoints
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database on startup."""
-    try:
-        init_db()
-        logger.info("Database initialized successfully")
-    except Exception as e:
-        logger.warning(f"Database initialization skipped: {e}")
-        # Continue anyway - some endpoints don't need DB
-
-
 @app.get("/")
-async def root():
-    """API health check."""
+@limiter.limit("60/minute")
+async def root(request: Request):
+    """API health check with rate limiting."""
     return {
         "status": "online",
         "service": "FareGlitch API",
@@ -115,22 +215,99 @@ async def root():
 
 
 @app.get("/deals/active", response_model=List[DealTeaserResponse])
+@limiter.limit("100/hour")
 async def get_active_deals(
+    request: Request,
     limit: int = Query(default=10, le=50),
-    db: Session = Depends(get_db_session)
+    db: Session = Depends(get_db_session),
+    subscriber: Optional[Subscriber] = Depends(get_optional_subscriber)
 ):
     """
     Get list of active deal teasers.
     
-    Returns public information only (no booking details).
-    """
-    deals = db.query(Deal).filter(
-        Deal.status == DealStatus.PUBLISHED,
-        Deal.is_active == True,
-        Deal.expires_at > datetime.now()
-    ).order_by(Deal.published_at.desc()).limit(limit).all()
+    Rate limit: 100 requests per hour per IP.
     
-    return deals
+    Returns public information only (no booking details).
+    Premium members see all deals immediately.
+    Non-members see deals after 1-hour delay.
+    """
+    # Query all active deals
+    all_deals = db.query(Deal).filter(
+        Deal.status == DealStatus.PUBLISHED,
+        Deal.is_active == True
+    ).order_by(Deal.published_at.desc()).all()
+    
+    # Filter out expired deals and apply membership visibility rules
+    now = datetime.now()
+    visible_deals = [
+        deal for deal in all_deals
+        if (not deal.expires_at or deal.expires_at > now) and can_see_deal(deal, subscriber)
+    ]
+    
+    return visible_deals[:limit]
+
+
+@app.post("/auth/login", response_model=LoginResponse)
+async def login(
+    login_request: LoginRequest,
+    db: Session = Depends(get_db_session)
+):
+    """
+    Login endpoint - authenticate subscriber and return JWT token.
+    
+    For passwordless auth, we'll send a magic link to email/SMS.
+    For now, just check if subscriber exists and return token.
+    """
+    # Find subscriber by email or phone
+    subscriber = None
+    if login_request.phone_number:
+        subscriber = db.query(Subscriber).filter(
+            Subscriber.phone_number == login_request.phone_number
+        ).first()
+    
+    if not subscriber and login_request.email:
+        subscriber = db.query(Subscriber).filter(
+            Subscriber.email == login_request.email
+        ).first()
+    
+    if not subscriber:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subscriber not found. Please subscribe first."
+        )
+    
+    # Create JWT token
+    access_token = create_access_token(
+        data={"sub": subscriber.phone_number}
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "subscriber": {
+            "id": subscriber.id,
+            "email": subscriber.email,
+            "phone_number": subscriber.phone_number,
+            "subscription_type": subscriber.subscription_type,
+            "is_premium": is_premium_member(subscriber)
+        }
+    }
+
+
+@app.get("/auth/me")
+async def get_current_user(
+    subscriber: Subscriber = Depends(get_current_subscriber)
+):
+    """Get current authenticated subscriber info."""
+    return {
+        "id": subscriber.id,
+        "email": subscriber.email,
+        "phone_number": subscriber.phone_number,
+        "subscription_type": subscriber.subscription_type,
+        "is_premium": is_premium_member(subscriber),
+        "subscribed_at": subscriber.subscribed_at,
+        "total_alerts_received": subscriber.total_alerts_received
+    }
 
 
 @app.get("/deals/{deal_number}", response_model=DealTeaserResponse)
@@ -350,6 +527,55 @@ async def admin_publish_deal(
         "status": "success",
         "deal_number": deal.deal_number,
         "hubspot_data": result
+    }
+
+
+# Health Check Endpoint
+@app.get("/health")
+async def health_check(db: Session = Depends(get_db_session)):
+    """
+    Health check endpoint for monitoring.
+    
+    Returns:
+        - status: healthy/unhealthy
+        - timestamp: current UTC time
+        - version: API version
+        - database: database connection status
+    """
+    try:
+        # Check database connectivity
+        db.execute("SELECT 1")
+        db_status = "connected"
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}")
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unhealthy",
+                "timestamp": datetime.utcnow().isoformat(),
+                "version": "1.0.0",
+                "database": f"error: {str(e)}"
+            }
+        )
+    
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0",
+        "database": db_status,
+        "environment": settings.amadeus_env
+    }
+
+
+@app.get("/readiness")
+async def readiness_check():
+    """
+    Kubernetes readiness probe endpoint.
+    Simple check without database dependency.
+    """
+    return {
+        "status": "ready",
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 

@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Tips & Deals Blog - FareGlitch</title>
+    {{ standard_header_includes }}
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@800&family=Inter:wght@500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #A8D8F0 0%, #ffffff 100%);
+            min-height: 100vh;
+        }
+        
+        /* Header Navigation */
+        .header {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+        .logo-text {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+        .logo-fare {
+            color: #1E5BA8;
+        }
+        .logo-glitch {
+            color: #4A9FDB;
+        }
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+        .nav-links a {
+            color: #1E5BA8;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+        .nav-links a:hover {
+            color: #4A9FDB;
+        }
+        .nav-links a.active {
+            color: #4A9FDB;
+            border-bottom: 2px solid #4A9FDB;
+            padding-bottom: 4px;
+        }
+        .subscribe-btn {
+            background: linear-gradient(135deg, #1E5BA8 0%, #4A9FDB 100%);
+            color: white !important;
+            padding: 0.5rem 1.25rem;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+        .subscribe-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(30, 91, 168, 0.3);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1E5BA8 0%, #A8D8F0 100%);
+            padding: 4rem 2rem;
+            text-align: center;
+            color: white;
+        }
+        .hero h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+        }
+
+        /* Blog Container */
+        .blog-container {
+            max-width: 1200px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        /* Featured Post */
+        .featured-post {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 3rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        .featured-image {
+            background: linear-gradient(135deg, #1E5BA8 0%, #4A9FDB 100%);
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+        }
+        .featured-content {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .featured-badge {
+            background: #7DB84D;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            width: fit-content;
+            margin-bottom: 1rem;
+        }
+        .featured-content h2 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 2rem;
+            color: #1E5BA8;
+            margin-bottom: 1rem;
+        }
+        .featured-meta {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        .featured-content p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+        .read-more {
+            background: linear-gradient(135deg, #1E5BA8 0%, #4A9FDB 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            width: fit-content;
+            transition: transform 0.3s;
+        }
+        .read-more:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Categories Filter */
+        .categories {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .category-btn {
+            background: white;
+            color: #1E5BA8;
+            padding: 0.75rem 1.5rem;
+            border: 2px solid #1E5BA8;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .category-btn:hover,
+        .category-btn.active {
+            background: #1E5BA8;
+            color: white;
+        }
+
+        /* Blog Grid */
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        .blog-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .blog-card:hover {
+            transform: translateY(-5px);
+        }
+        .blog-image {
+            background: linear-gradient(135deg, #4A9FDB 0%, #A8D8F0 100%);
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+        .blog-content {
+            padding: 1.5rem;
+        }
+        .blog-category {
+            color: #4A9FDB;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .blog-content h3 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.3rem;
+            color: #1E5BA8;
+            margin-bottom: 0.5rem;
+        }
+        .blog-meta {
+            color: #999;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        .blog-excerpt {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        /* Newsletter Signup */
+        .newsletter {
+            background: linear-gradient(135deg, #1E5BA8 0%, #4A9FDB 100%);
+            padding: 3rem 2rem;
+            border-radius: 12px;
+            text-align: center;
+            color: white;
+            margin-bottom: 3rem;
+        }
+        .newsletter h2 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        .newsletter p {
+            margin-bottom: 1.5rem;
+            opacity: 0.95;
+        }
+        .newsletter-form {
+            max-width: 500px;
+            margin: 0 auto;
+            display: flex;
+            gap: 1rem;
+        }
+        .newsletter-form input {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .newsletter-form button {
+            background: #7DB84D;
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .newsletter-form button:hover {
+            background: #6da03d;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1E5BA8;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+        .footer-links a {
+            color: #A8D8F0;
+            text-decoration: none;
+        }
+        .footer-links a:hover {
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .featured-post {
+                grid-template-columns: 1fr;
+            }
+            .blog-grid {
+                grid-template-columns: 1fr;
+            }
+            .hero h1 {
+                font-size: 2rem;
+            }
+            .newsletter-form {
+                flex-direction: column;
+            }
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Navigation -->
+    <header class="header">
+        <nav class="nav-container">
+            <a href="/" class="logo">
+                <img src="https://i.imgur.com/cov9izk.jpg" alt="FareGlitch Logo">
+                <span class="logo-text">
+                    <span class="logo-fare">Fare</span><span class="logo-glitch">Glitch</span>
+                </span>
+            </a>
+            <nav class="nav-links">
+                <a href="/home">Home</a>
+                <a href="/about">About</a>
+                <a href="/blog" class="active">Blog</a>
+                <a href="/signin">Sign In</a>
+                <a href="/home#subscribe" class="subscribe-btn">Subscribe Now</a>
+            </nav>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>✈️ Travel Tips & Flight Deals Blog</h1>
+        <p>Expert advice, insider secrets, and the latest travel hacks</p>
+    </section>
+
+    <!-- Main Content -->
+    <div class="blog-container">
+        <!-- Featured Post -->
+        <article class="featured-post">
+            <div class="featured-image">✈️</div>
+            <div class="featured-content">
+                <span class="featured-badge">⭐ FEATURED</span>
+                <h2>How to Find $100 Flights to Europe: The Ultimate Guide</h2>
+                <div class="featured-meta">📅 November 28, 2024 • ⏱️ 8 min read</div>
+                <p>Discover the secret strategies and timing tricks that airlines don't want you to know. Learn how to consistently find transatlantic flights for under $100 and turn your European dreams into reality.</p>
+                <a href="#" class="read-more">Read Full Article →</a>
+            </div>
+        </article>
+
+        <!-- Category Filter -->
+        <div class="categories">
+            <button class="category-btn active">All Posts</button>
+            <button class="category-btn">Travel Tips</button>
+            <button class="category-btn">Flight Deals</button>
+            <button class="category-btn">Destinations</button>
+            <button class="category-btn">Packing Guides</button>
+            <button class="category-btn">Budget Travel</button>
+        </div>
+
+        <!-- Blog Grid -->
+        <div class="blog-grid">
+            <article class="blog-card">
+                <div class="blog-image">🌴</div>
+                <div class="blog-content">
+                    <div class="blog-category">Travel Tips</div>
+                    <h3>Best Time to Book International Flights</h3>
+                    <div class="blog-meta">📅 November 27, 2024 • ⏱️ 5 min read</div>
+                    <p class="blog-excerpt">Timing is everything when it comes to scoring cheap international flights. Learn the optimal booking windows...</p>
+                    <a href="#" class="read-more">Read More →</a>
+                </div>
+            </article>
+
+            <article class="blog-card">
+                <div class="blog-image">💰</div>
+                <div class="blog-content">
+                    <div class="blog-category">Flight Deals</div>
+                    <h3>Last Week's Top 10 Fare Glitches</h3>
+                    <div class="blog-meta">📅 November 25, 2024 • ⏱️ 4 min read</div>
+                    <p class="blog-excerpt">Missed some incredible deals? Here's a roundup of the most jaw-dropping fare glitches from the past week...</p>
+                    <a href="#" class="read-more">Read More →</a>
+                </div>
+            </article>
+
+            <article class="blog-card">
+                <div class="blog-image">🎒</div>
+                <div class="blog-content">
+                    <div class="blog-category">Packing Guides</div>
+                    <h3>Essential Carry-On Packing List for Europe</h3>
+                    <div class="blog-meta">📅 November 24, 2024 • ⏱️ 6 min read</div>
+                    <p class="blog-excerpt">Travel light and smart with our comprehensive carry-on packing guide for European adventures...</p>
+                    <a href="#" class="read-more">Read More →</a>
+                </div>
+            </article>
+
+            <article class="blog-card">
+                <div class="blog-image">🗺️</div>
+                <div class="blog-content">
+                    <div class="blog-category">Destinations</div>
+                    <h3>10 Underrated Cities Cheaper Than Paris</h3>
+                    <div class="blog-meta">📅 November 22, 2024 • ⏱️ 7 min read</div>
+                    <p class="blog-excerpt">Discover stunning European destinations that offer the same charm as Paris but at half the cost...</p>
+                    <a href="#" class="read-more">Read More →</a>
+                </div>
+            </article>
+
+            <article class="blog-card">
+                <div class="blog-image">📱</div>
+                <div class="blog-content">
+                    <div class="blog-category">Travel Tips</div>
+                    <h3>How FareGlitch Alerts Work: Behind the Scenes</h3>
+                    <div class="blog-meta">📅 November 20, 2024 • ⏱️ 5 min read</div>
+                    <p class="blog-excerpt">Ever wondered how we catch fare glitches before they disappear? Here's an inside look at our technology...</p>
+                    <a href="#" class="read-more">Read More →</a>
+                </div>
+            </article>
+
+            <article class="blog-card">
+                <div class="blog-image">🏝️</div>
+                <div class="blog-content">
+                    <div class="blog-category">Budget Travel</div>
+                    <h3>Southeast Asia for $30/Day: Complete Guide</h3>
+                    <div class="blog-meta">📅 November 18, 2024 • ⏱️ 9 min read</div>
+                    <p class="blog-excerpt">Your ultimate guide to exploring Thailand, Vietnam, and Bali on a shoestring budget...</p>
+                    <a href="#" class="read-more">Read More →</a>
+                </div>
+            </article>
+        </div>
+
+        <!-- Newsletter Signup -->
+        <section class="newsletter">
+            <h2>📬 Never Miss a Deal</h2>
+            <p>Get our best travel tips and exclusive fare glitch alerts delivered to your inbox</p>
+            <div style="max-width: 600px; margin: 1.5rem auto; background: white; padding: 2rem; border-radius: 12px;">
+                <script src="https://js.hsforms.net/forms/embed/49199397.js" defer></script>
+                <div class="hs-form-frame" data-region="na1" data-form-id="50e8cf4e-6d82-47e7-867c-1553f93eb68e" data-portal-id="49199397"></div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="/home">Home</a>
+            <a href="/about">About</a>
+            <a href="/blog">Blog</a>
+            <a href="/signin">Sign In</a>
+        </div>
+        <div style="margin: 1.5rem 0; display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+            <a href="https://www.instagram.com/fareglitch/" target="_blank" style="color: #E1306C; text-decoration: none; font-weight: 600;">📸 Instagram</a>
+            <a href="https://www.facebook.com/fareglitch/" target="_blank" style="color: #1877F2; text-decoration: none; font-weight: 600;">👥 Facebook</a>
+            <a href="https://www.linkedin.com/company/fareglitch" target="_blank" style="color: #0A66C2; text-decoration: none; font-weight: 600;">💼 LinkedIn</a>
+        </div>
+        <p>&copy; 2025 FareGlitch. All rights reserved.</p>
+    </footer>
+
+    {{ standard_footer_includes }}
+</body>
+</html>
