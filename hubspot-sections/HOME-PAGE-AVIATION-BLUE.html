@@ -123,7 +123,20 @@
     <p style="font-family: 'Inter', 'Segoe UI', sans-serif; font-size: 1.35rem; color: white; line-height: 1.8; margin-bottom: 2.5rem; font-weight: 500; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
       Join 500+ smart travelers getting exclusive SMS alerts with <strong style="color: #FFD700;">$200+ average savings</strong> per deal. Subscribe in 30 seconds! 🎉
     </p>
-    <!-- Add your HubSpot form here -->
+    <!-- Hero Subscribe Form -->
+    <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(12px); border: 2px solid rgba(255,255,255,0.25); border-radius: 24px; padding: 2rem; max-width: 500px; margin: 0 auto;">
+      <form id="fg-hero-form" style="display: flex; flex-direction: column; gap: 0.75em;">
+        <input type="email" id="fg-hero-email" placeholder="your@email.com" required
+          style="padding: 14px 18px; border: 2px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 1em; background: rgba(255,255,255,0.9); color: #1a1a2e; outline: none;">
+        <input type="tel" id="fg-hero-phone" placeholder="0412 345 678" required
+          style="padding: 14px 18px; border: 2px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 1em; background: rgba(255,255,255,0.9); color: #1a1a2e; outline: none;">
+        <button type="submit" id="fg-hero-btn"
+          style="padding: 16px; background: linear-gradient(135deg, #FFD700, #FFA500); color: #1a1a2e; border: none; border-radius: 12px; font-size: 1.15em; font-weight: 800; cursor: pointer; font-family: 'Poppins', sans-serif; box-shadow: 0 4px 15px rgba(255,215,0,0.4);">
+          🚀 Start Getting Alerts — $5/mo
+        </button>
+      </form>
+      <p id="fg-hero-msg" style="text-align: center; margin-top: 0.75em; color: white; min-height: 1.2em; font-size: 0.9em;"></p>
+    </div>
   </div>
 </div>
 
@@ -194,75 +207,25 @@
   </div>
 </div>
 
-<!-- SECTION 4: RECENT DEALS -->
+<!-- SECTION 4: LIVE DEALS (auto-loaded from API) -->
 <div style="background: linear-gradient(to bottom, #F8F9FF, #FFFFFF); padding: 100px 20px;">
   <div style="max-width: 1200px; margin: 0 auto;">
     
     <div style="text-align: center; margin-bottom: 4rem;">
-      <h2 style="font-family: 'Poppins', sans-serif; font-size: 3rem; font-weight: 800; color: #1E5BA8; margin-bottom: 1rem;">Recent Deals</h2>
-      <p style="font-family: 'Inter', sans-serif; color: #1E5BA8; font-size: 1.25rem; font-weight: 700; background: #E8F4FB; display: inline-block; padding: 0.75rem 1.5rem; border-radius: 50px; border: 2px solid #4A9FDB;">⚡ All expired - subscribers got them first!</p>
+      <h2 style="font-family: 'Poppins', sans-serif; font-size: 3rem; font-weight: 800; color: #1E5BA8; margin-bottom: 1rem;">Live Deals</h2>
+      <p id="fg-deals-status" style="font-family: 'Inter', sans-serif; color: #1E5BA8; font-size: 1.25rem; font-weight: 700; background: #E8F4FB; display: inline-block; padding: 0.75rem 1.5rem; border-radius: 50px; border: 2px solid #4A9FDB;">⚡ Loading deals from scanner...</p>
     </div>
     
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-      
-      <!-- Deal 1 -->
-      <div style="background: white; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 3px solid #4A9FDB; border-radius: 24px; padding: 2.5rem; transition: transform 0.3s ease;">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1.5rem;">
-          <div>
-            <h3 style="font-family: 'Poppins', sans-serif; font-size: 1.75rem; color: #1E5BA8; font-weight: 800; margin-bottom: 0.5rem;">SYD → DPS</h3>
-            <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 1rem; margin: 0; font-weight: 500;">Sydney to Bali 🏝️</p>
-          </div>
-          <span style="background: #1E5BA8; color: white; padding: 0.5rem 1rem; border-radius: 50px; font-size: 0.75rem; font-weight: 700; font-family: 'Inter', sans-serif;">EXPIRED</span>
-        </div>
-        <div style="margin: 2rem 0;">
-          <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 0.95rem; margin-bottom: 0.5rem; font-weight: 600;">Normal Price</p>
-          <p style="font-family: 'Poppins', sans-serif; color: #9CA3AF; text-decoration: line-through; font-size: 1.4rem; margin-bottom: 1rem; font-weight: 600;">$850</p>
-          <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 0.95rem; margin-bottom: 0.5rem; font-weight: 600;">Deal Price</p>
-          <p style="font-family: 'Poppins', sans-serif; color: #4A9FDB; font-size: 2.5rem; font-weight: 900; margin-bottom: 0.75rem;">$360</p>
-          <p style="font-family: 'Inter', sans-serif; color: #7DB84D; font-weight: 700; font-size: 1.25rem; margin: 0;">💰 Savings: $490</p>
-        </div>
-        <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 0.95rem; margin: 0; font-weight: 500;">⏱️ Lasted 2.5 hrs</p>
-      </div>
-      
-      <!-- Deal 2 -->
-      <div style="background: white; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 3px solid #3B8EC9; border-radius: 24px; padding: 2.5rem; transition: transform 0.3s ease;">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1.5rem;">
-          <div>
-            <h3 style="font-family: 'Poppins', sans-serif; font-size: 1.75rem; color: #1E5BA8; font-weight: 800; margin-bottom: 0.5rem;">LAX → TYO</h3>
-            <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 1rem; margin: 0; font-weight: 500;">Los Angeles to Tokyo 🏌️</p>
-          </div>
-          <span style="background: #1E5BA8; color: white; padding: 0.5rem 1rem; border-radius: 50px; font-size: 0.75rem; font-weight: 700; font-family: 'Inter', sans-serif;">EXPIRED</span>
-        </div>
-        <div style="margin: 2rem 0;">
-          <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 0.95rem; margin-bottom: 0.5rem; font-weight: 600;">Normal Price</p>
-          <p style="font-family: 'Poppins', sans-serif; color: #9CA3AF; text-decoration: line-through; font-size: 1.4rem; margin-bottom: 1rem; font-weight: 600;">$1,200</p>
-          <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 0.95rem; margin-bottom: 0.5rem; font-weight: 600;">Deal Price</p>
-          <p style="font-family: 'Poppins', sans-serif; color: #3B8EC9; font-size: 2.5rem; font-weight: 900; margin-bottom: 0.75rem;">$645</p>
-          <p style="font-family: 'Inter', sans-serif; color: #7DB84D; font-weight: 700; font-size: 1.25rem; margin: 0;">💰 Savings: $555</p>
-        </div>
-        <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 0.95rem; margin: 0; font-weight: 500;">⏱️ Lasted 1.5 hrs</p>
-      </div>
-      
-      <!-- Deal 3 -->
-      <div style="background: white; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 3px solid #1E5BA8; border-radius: 24px; padding: 2.5rem; transition: transform 0.3s ease;">
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1.5rem;">
-          <div>
-            <h3 style="font-family: 'Poppins', sans-serif; font-size: 1.75rem; color: #1E5BA8; font-weight: 800; margin-bottom: 0.5rem;">LHR → BKK</h3>
-            <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 1rem; margin: 0; font-weight: 500;">London to Bangkok 🌴</p>
-          </div>
-          <span style="background: #1E5BA8; color: white; padding: 0.5rem 1rem; border-radius: 50px; font-size: 0.75rem; font-weight: 700; font-family: 'Inter', sans-serif;">EXPIRED</span>
-        </div>
-        <div style="margin: 2rem 0;">
-          <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 0.95rem; margin-bottom: 0.5rem; font-weight: 600;">Normal Price</p>
-          <p style="font-family: 'Poppins', sans-serif; color: #9CA3AF; text-decoration: line-through; font-size: 1.4rem; margin-bottom: 1rem; font-weight: 600;">£680</p>
-          <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 0.95rem; margin-bottom: 0.5rem; font-weight: 600;">Deal Price</p>
-          <p style="font-family: 'Poppins', sans-serif; color: #4A9FDB; font-size: 2.5rem; font-weight: 900; margin-bottom: 0.75rem;">£298</p>
-          <p style="font-family: 'Inter', sans-serif; color: #7DB84D; font-weight: 700; font-size: 1.25rem; margin: 0;">💰 Savings: £382</p>
-        </div>
-        <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 0.95rem; margin: 0; font-weight: 500;">⏱️ Lasted 3 hrs</p>
-      </div>
-      
+    <div id="fg-deals-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+      <!-- Deals auto-loaded by JavaScript below -->
     </div>
+
+    <div style="text-align: center; margin-top: 3rem;">
+      <p style="font-family: 'Inter', sans-serif; color: #626784; font-size: 1.1rem;">
+        📱 <strong>Subscribers get these deals via SMS 1 hour before they appear here.</strong>
+      </p>
+    </div>
+    
   </div>
 </div>
 
@@ -323,29 +286,39 @@
   </div>
 </div>
 
-<!-- SECTION 6: SUBSCRIBE CTA -->
+<!-- SECTION 6: SUBSCRIBE CTA (connected to Stripe via API) -->
 <div style="background: linear-gradient(to bottom, #FFFFFF, #F8F9FF); padding: 100px 20px;">
   <div style="max-width: 900px; margin: 0 auto; text-align: center;">
     
     <h2 style="font-family: 'Poppins', sans-serif; font-size: 3rem; font-weight: 800; color: #1E5BA8; margin-bottom: 1.5rem;">Join FareGlitch Today! 🎉</h2>
     
     <p style="font-family: 'Inter', sans-serif; font-size: 1.35rem; color: #626784; margin-bottom: 4rem; line-height: 1.8; font-weight: 500;">
-      Subscribe in 30 seconds. No credit card required now. Start your free trial! ✨
+      Subscribe in 30 seconds. $5/month, cancel anytime. Start saving on flights! ✨
     </p>
     
     <div id="subscribe" style="background: white; box-shadow: 0 20px 60px rgba(0,0,0,0.15); border: 4px solid #4A9FDB; border-radius: 32px; padding: 3.5rem 3rem; max-width: 700px; margin: 0 auto;">
       
       <p style="font-family: 'Poppins', sans-serif; color: #1E5BA8; margin-bottom: 2.5rem; font-size: 1.35rem; font-weight: 700;">📱 Get started in 30 seconds:</p>
       
-      <!-- HUBSPOT FORM -->
-      <div style="margin: 2.5rem 0;">
-        <script src="https://js.hsforms.net/forms/embed/49199397.js" defer></script>
-        <div class="hs-form-frame" data-region="na1" data-form-id="50e8cf4e-6d82-47e7-867c-1553f93eb68e" data-portal-id="49199397"></div>
-      </div>
+      <!-- API-connected Subscribe Form -->
+      <form id="fg-cta-form" style="display: flex; flex-direction: column; gap: 1em; max-width: 450px; margin: 0 auto;">
+        <input type="email" id="fg-cta-email" placeholder="your@email.com" required
+          style="font-family: 'Inter', sans-serif; padding: 16px 20px; border: 3px solid #A8D8F0; border-radius: 16px; font-size: 1.05rem; outline: none; transition: border 0.3s;"
+          onfocus="this.style.borderColor='#1E5BA8'" onblur="this.style.borderColor='#A8D8F0'">
+        <input type="tel" id="fg-cta-phone" placeholder="0412 345 678" required
+          style="font-family: 'Inter', sans-serif; padding: 16px 20px; border: 3px solid #A8D8F0; border-radius: 16px; font-size: 1.05rem; outline: none; transition: border 0.3s;"
+          onfocus="this.style.borderColor='#1E5BA8'" onblur="this.style.borderColor='#A8D8F0'">
+        <button type="submit" id="fg-cta-btn"
+          style="font-family: 'Poppins', sans-serif; padding: 18px; background: linear-gradient(135deg, #1E5BA8, #4A9FDB); color: white; border: none; border-radius: 50px; font-weight: 800; font-size: 1.2rem; cursor: pointer; box-shadow: 0 10px 30px rgba(30, 91, 168, 0.4); transition: transform 0.3s;">
+          🚀 Subscribe — $5/month
+        </button>
+      </form>
+      <p id="fg-cta-msg" style="text-align: center; margin-top: 1em; color: #626784; min-height: 1.5em; font-family: 'Inter', sans-serif;"></p>
       
       <div style="background: linear-gradient(135deg, #E8F4FB, #D9F0FA); padding: 1.75rem; border-radius: 16px; margin-top: 2.5rem;">
         <p style="font-family: 'Inter', sans-serif; color: #1E5BA8; font-size: 1.1rem; margin: 0; font-weight: 600; line-height: 1.9;">
-          ✓ No credit card required now<br>
+          ✓ Unlimited SMS deal alerts<br>
+          ✓ 1 hour before Instagram followers<br>
           ✓ Cancel anytime, no hassle<br>
           ✓ Join 500+ smart travelers saving big! 💸
         </p>
@@ -358,6 +331,131 @@
 
 <!-- FOOTER -->
 <div style="background: #1E5BA8; padding: 60px 20px 40px;">
+
+<!-- FareGlitch API Integration Script -->
+<script>
+(function() {
+  var API = "https://api.fareglitch.com.au";
+
+  // ── Generic subscribe handler ─────────────────────────────────
+  function handleSubscribe(formId, emailId, phoneId, btnId, msgId) {
+    var form = document.getElementById(formId);
+    if (!form) return;
+    var msg = document.getElementById(msgId);
+    var btn = document.getElementById(btnId);
+
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+      var email = document.getElementById(emailId).value.trim();
+      var phone = document.getElementById(phoneId).value.trim();
+      if (!email || !phone) return;
+
+      btn.disabled = true;
+      btn.style.opacity = "0.7";
+      btn.textContent = "Processing...";
+      msg.textContent = "";
+
+      fetch(API + "/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, phone_number: phone })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.checkout_url) {
+          msg.style.color = "#1E5BA8";
+          msg.textContent = "Redirecting to secure checkout...";
+          window.location.href = data.checkout_url;
+        } else if (data.status === "already_subscribed") {
+          msg.style.color = "#7DB84D";
+          msg.textContent = "✅ " + data.message;
+          btn.textContent = "Already Subscribed ✓";
+          btn.disabled = false;
+          btn.style.opacity = "1";
+        } else {
+          msg.style.color = "#e74c3c";
+          msg.textContent = data.detail || "Something went wrong. Try again.";
+          btn.textContent = "🚀 Subscribe — $5/month";
+          btn.disabled = false;
+          btn.style.opacity = "1";
+        }
+      })
+      .catch(function() {
+        msg.style.color = "#e74c3c";
+        msg.textContent = "Network error. Please try again.";
+        btn.textContent = "🚀 Subscribe — $5/month";
+        btn.disabled = false;
+        btn.style.opacity = "1";
+      });
+    });
+  }
+
+  // Wire up both subscribe forms (hero + CTA section)
+  handleSubscribe("fg-hero-form", "fg-hero-email", "fg-hero-phone", "fg-hero-btn", "fg-hero-msg");
+  handleSubscribe("fg-cta-form", "fg-cta-email", "fg-cta-phone", "fg-cta-btn", "fg-cta-msg");
+
+  // Show success if returning from Stripe checkout
+  if (window.location.search.indexOf("subscribed=true") !== -1) {
+    var heroMsg = document.getElementById("fg-hero-msg");
+    if (heroMsg) {
+      heroMsg.style.color = "#7DB84D";
+      heroMsg.textContent = "🎉 You're subscribed! You'll get SMS alerts for every deal.";
+    }
+    var ctaMsg = document.getElementById("fg-cta-msg");
+    if (ctaMsg) {
+      ctaMsg.style.color = "#7DB84D";
+      ctaMsg.textContent = "🎉 You're subscribed! You'll get SMS alerts for every deal.";
+    }
+  }
+
+  // ── Live Deals Feed ─────────────────────────────────────────
+  var grid = document.getElementById("fg-deals-grid");
+  var statusEl = document.getElementById("fg-deals-status");
+  var colors = ["#4A9FDB", "#3B8EC9", "#1E5BA8"];
+
+  function loadDeals() {
+    fetch(API + "/deals/live")
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.deals || data.deals.length === 0) {
+          statusEl.textContent = "🔍 Scanner running — no active deals right now. Check back soon!";
+          grid.innerHTML = '<div style="text-align:center;grid-column:1/-1;padding:3rem;">' +
+            '<p style="font-family:Inter,sans-serif;color:#626784;font-size:1.15rem;margin-bottom:1rem;">Our scanner checks 26 airports every 3 hours.</p>' +
+            '<p style="font-family:Inter,sans-serif;color:#626784;">Subscribe to get SMS alerts the moment a deal drops! 📱</p></div>';
+          return;
+        }
+
+        statusEl.textContent = "⚡ " + data.deals.length + " live deal" + (data.deals.length > 1 ? "s" : "") + " — subscribers got these via SMS first!";
+
+        var html = "";
+        data.deals.forEach(function(d, i) {
+          var bc = colors[i % colors.length];
+          html += '<div style="background:white;box-shadow:0 10px 40px rgba(0,0,0,0.1);border:3px solid ' + bc + ';border-radius:24px;padding:2.5rem;transition:transform 0.3s ease;">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:1.5rem;">';
+          html += '<div><h3 style="font-family:Poppins,sans-serif;font-size:1.75rem;color:#1E5BA8;font-weight:800;margin:0 0 0.5rem 0;">' + d.route + '</h3>';
+          if (d.airline) html += '<p style="font-family:Inter,sans-serif;color:#626784;font-size:1rem;margin:0;font-weight:500;">' + d.airline + ' · ' + d.cabin_class + '</p>';
+          html += '</div>';
+          html += '<span style="background:linear-gradient(135deg,#7DB84D,#5a9e2f);color:white;padding:0.5rem 1rem;border-radius:50px;font-size:0.8rem;font-weight:700;font-family:Inter,sans-serif;white-space:nowrap;">-' + d.savings_pct + '%</span>';
+          html += '</div>';
+          html += '<div style="margin:2rem 0;">';
+          html += '<p style="font-family:Inter,sans-serif;color:#626784;font-size:0.95rem;margin-bottom:0.5rem;font-weight:600;">Normal Price</p>';
+          html += '<p style="font-family:Poppins,sans-serif;color:#9CA3AF;text-decoration:line-through;font-size:1.4rem;margin-bottom:1rem;font-weight:600;">$' + d.normal_price + '</p>';
+          html += '<p style="font-family:Inter,sans-serif;color:#626784;font-size:0.95rem;margin-bottom:0.5rem;font-weight:600;">Glitch Price</p>';
+          html += '<p style="font-family:Poppins,sans-serif;color:' + bc + ';font-size:2.5rem;font-weight:900;margin-bottom:0.75rem;">$' + d.glitch_price + '</p>';
+          html += '<p style="font-family:Inter,sans-serif;color:#7DB84D;font-weight:700;font-size:1.25rem;margin:0;">💰 Save ' + d.savings_pct + '%</p>';
+          html += '</div></div>';
+        });
+        grid.innerHTML = html;
+      })
+      .catch(function() {
+        grid.innerHTML = '<p style="text-align:center;color:#626784;grid-column:1/-1;font-family:Inter,sans-serif;">Unable to load deals. Please refresh.</p>';
+      });
+  }
+
+  loadDeals();
+  setInterval(loadDeals, 60000);
+})();
+</script>
   <div style="max-width: 1200px; margin: 0 auto;">
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 3rem; margin-bottom: 3rem;">
       

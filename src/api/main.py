@@ -773,6 +773,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db_session)
                 f"${settings.subscription_price_aud}/month"
             )
 
+            # Sync to HubSpot CRM (non-blocking, best-effort)
+            try:
+                hubspot = HubSpotIntegration()
+                hubspot.sync_subscriber(email=email, phone=phone, subscription_type="sms_monthly")
+            except Exception as hs_err:
+                logger.warning(f"HubSpot sync skipped: {hs_err}")
+
             return {"status": "subscription_activated", "email": email}
 
         # ── Deal unlock checkout (legacy) ──

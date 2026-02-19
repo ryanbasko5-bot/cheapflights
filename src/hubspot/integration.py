@@ -26,8 +26,76 @@ class HubSpotIntegration:
     
     def __init__(self):
         """Initialize HubSpot client."""
-        self.client = HubSpot(access_token=settings.hubspot_api_key)
+        self.client = HubSpot(access_token=settings.hubspot_api_key) if settings.hubspot_api_key else None
         self.portal_id = settings.hubspot_portal_id
+        self._enabled = bool(settings.hubspot_api_key)
+
+    def sync_subscriber(self, email: str, phone: str, subscription_type: str = "sms_monthly") -> Optional[str]:
+        """
+        Create or update a HubSpot contact when someone subscribes.
+        Called from the Stripe webhook after successful subscription checkout.
+
+        Returns HubSpot contact ID or None if HubSpot not configured.
+        """
+        if not self._enabled:
+            logger.debug("HubSpot not configured — skipping contact sync")
+            return None
+
+        try:
+            from hubspot.crm.contacts import SimplePublicObjectInput as ContactInput
+
+            properties = {
+                "email": email,
+                "phone": phone,
+                "fareglitch_subscription": subscription_type,
+                "fareglitch_subscribed_at": datetime.now().isoformat(),
+                "lifecyclestage": "customer",
+            }
+
+            contact_input = ContactInput(properties=properties)
+            response = self.client.crm.contacts.basic_api.create(
+                simple_public_object_input=contact_input
+            )
+            logger.info(f"✅ HubSpot contact created: {email} → {response.id}")
+            return response.id
+
+        except ApiException as e:
+            if "CONTACT_EXISTS" in str(e) or "409" in str(e):
+                # Contact already exists — update them
+                try:
+                    # Search for existing contact by email
+                    search_request = {
+                        "filterGroups": [{
+                            "filters": [{
+                                "propertyName": "email",
+                                "operator": "EQ",
+                                "value": email,
+                            }]
+                        }]
+                    }
+                    results = self.client.crm.contacts.search_api.do_search(search_request)
+                    if results.results:
+                        contact_id = results.results[0].id
+                        update_props = {
+                            "fareglitch_subscription": subscription_type,
+                            "fareglitch_subscribed_at": datetime.now().isoformat(),
+                            "lifecyclestage": "customer",
+                        }
+                        self.client.crm.contacts.basic_api.update(
+                            contact_id=contact_id,
+                            simple_public_object_input=ContactInput(properties=update_props),
+                        )
+                        logger.info(f"✅ HubSpot contact updated: {email} → {contact_id}")
+                        return contact_id
+                except Exception as update_err:
+                    logger.warning(f"HubSpot contact update failed: {update_err}")
+                return None
+            else:
+                logger.error(f"HubSpot contact creation failed: {e}")
+                return None
+        except Exception as e:
+            logger.warning(f"HubSpot sync failed (non-critical): {e}")
+            return None
         
     async def publish_deal(self, deal: Deal) -> Dict[str, Any]:
         """
