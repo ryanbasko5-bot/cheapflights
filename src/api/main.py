@@ -193,7 +193,6 @@ class DealFullResponse(BaseModel):
 class UnlockDealRequest(BaseModel):
     """Request to unlock a deal."""
     email: EmailStr
-    payment_id: str  # HubSpot payment/order ID
 
 
 class RefundRequest(BaseModel):
@@ -201,6 +200,12 @@ class RefundRequest(BaseModel):
     email: EmailStr
     deal_number: str
     reason: str
+
+
+class SubscribeRequest(BaseModel):
+    """Request to subscribe for $5/month SMS alerts."""
+    email: EmailStr
+    phone_number: str
 
 
 # API Endpoints
@@ -247,6 +252,48 @@ async def get_active_deals(
     ]
     
     return visible_deals[:limit]
+
+
+@app.get("/deals/live")
+@limiter.limit("300/hour")
+async def get_live_deals_for_website(
+    request: Request,
+    db: Session = Depends(get_db_session),
+):
+    """
+    Public feed for HubSpot website — returns deals as simple JSON.
+
+    This endpoint is called by JavaScript on fareglitch.com.au/home
+    to display live deals without manual copy-paste.
+    No auth required, but only shows teasers (no booking details).
+    """
+    all_deals = db.query(Deal).filter(
+        Deal.status == DealStatus.PUBLISHED,
+        Deal.is_active == True,
+    ).order_by(Deal.published_at.desc()).limit(12).all()
+
+    now = datetime.now()
+    deals_out = []
+    for d in all_deals:
+        if d.expires_at and d.expires_at < now:
+            continue
+        deals_out.append({
+            "deal_number": d.deal_number,
+            "route": f"{d.origin} → {d.destination}",
+            "headline": d.teaser_headline or f"{d.origin} to {d.destination}",
+            "normal_price": d.normal_price,
+            "glitch_price": d.mistake_price,
+            "savings_pct": int(d.savings_percentage * 100),
+            "cabin_class": d.cabin_class or "Economy",
+            "airline": d.airline or "",
+            "expires_at": d.expires_at.isoformat() if d.expires_at else None,
+        })
+
+    return {
+        "deals": deals_out,
+        "count": len(deals_out),
+        "updated_at": datetime.utcnow().isoformat(),
+    }
 
 
 @app.post("/auth/login", response_model=LoginResponse)
@@ -312,6 +359,92 @@ async def get_current_user(
     }
 
 
+# ----------------------------------------------------------------
+# Subscription Endpoints ($5/month)
+# ----------------------------------------------------------------
+
+@app.post("/subscribe")
+@limiter.limit("10/hour")
+async def subscribe(
+    request: Request,
+    sub_request: SubscribeRequest,
+    db: Session = Depends(get_db_session),
+):
+    """
+    Start a $5/month subscription for SMS deal alerts.
+
+    Flow:
+    1. Creates or finds subscriber in DB
+    2. Creates Stripe Checkout Session (subscription mode)
+    3. Returns checkout URL → user pays on Stripe's page
+    4. Stripe webhook activates the subscription
+    """
+    from src.payments.stripe_checkout import create_subscription_checkout
+
+    # Normalise phone number (strip spaces, ensure +61)
+    phone = sub_request.phone_number.strip().replace(" ", "")
+    if phone.startswith("0"):
+        phone = "+61" + phone[1:]
+    elif not phone.startswith("+"):
+        phone = "+61" + phone
+
+    # Find or create subscriber
+    subscriber = db.query(Subscriber).filter(
+        (Subscriber.phone_number == phone) | (Subscriber.email == sub_request.email)
+    ).first()
+
+    if subscriber and subscriber.stripe_subscription_id and subscriber.is_active:
+        return {
+            "status": "already_subscribed",
+            "message": "You're already subscribed! You'll get SMS alerts for every deal.",
+        }
+
+    if not subscriber:
+        subscriber = Subscriber(
+            phone_number=phone,
+            email=sub_request.email,
+            subscription_type=SubscriptionType.FREE,
+            is_active=True,
+        )
+        db.add(subscriber)
+        db.commit()
+
+    checkout = create_subscription_checkout(
+        email=sub_request.email,
+        phone=phone,
+    )
+
+    return {
+        "status": "checkout_created",
+        "checkout_url": checkout["checkout_url"],
+        "session_id": checkout["session_id"],
+        "price": f"${settings.subscription_price_aud:.2f} AUD/month",
+    }
+
+
+@app.post("/unsubscribe")
+async def unsubscribe(
+    request: Request,
+    email: EmailStr = Query(...),
+    db: Session = Depends(get_db_session),
+):
+    """Cancel subscription at end of current billing period."""
+    subscriber = db.query(Subscriber).filter(Subscriber.email == email).first()
+
+    if not subscriber or not subscriber.stripe_subscription_id:
+        raise HTTPException(status_code=404, detail="No active subscription found")
+
+    from src.payments.stripe_checkout import cancel_subscription
+
+    result = cancel_subscription(subscriber.stripe_subscription_id)
+
+    return {
+        "status": "success",
+        "message": "Subscription will cancel at end of billing period. You'll keep receiving alerts until then.",
+        "cancel_at": result["cancel_at"],
+    }
+
+
 @app.get("/deals/{deal_number}", response_model=DealTeaserResponse)
 async def get_deal_teaser(
     deal_number: str,
@@ -340,9 +473,9 @@ async def unlock_deal(
     db: Session = Depends(get_db_session)
 ):
     """
-    Unlock a deal after payment.
-    
-    This endpoint is called by HubSpot webhook after successful payment.
+    Check if deal is already unlocked for this email.
+    If yes → return full deal details.
+    If no → return 402 with Stripe checkout URL.
     """
     deal = db.query(Deal).filter(Deal.deal_number == deal_number.upper()).first()
     
@@ -358,25 +491,31 @@ async def unlock_deal(
         DealUnlock.email == unlock_request.email
     ).first()
     
-    if existing_unlock:
-        # Already unlocked, return details
+    if existing_unlock and existing_unlock.payment_status == "succeeded":
+        # Already paid — return full deal
         return deal
-        
-    # Record unlock
-    hubspot = HubSpotIntegration()
-    unlock = await hubspot.record_unlock(
-        deal=deal,
-        email=unlock_request.email,
-        payment_id=unlock_request.payment_id
+    
+    # Not yet paid — create Stripe Checkout session
+    from src.payments.stripe_checkout import create_checkout_session
+    
+    checkout = create_checkout_session(
+        deal_number=deal.deal_number,
+        deal_headline=deal.teaser_headline or f"{deal.origin} → {deal.destination}",
+        amount_aud=deal.unlock_fee,
+        customer_email=unlock_request.email,
     )
     
-    db.add(unlock)
-    db.commit()
-    
-    # Trigger delivery workflow
-    await hubspot.trigger_delivery_workflow(deal, unlock.hubspot_contact_id)
-    
-    return deal
+    return JSONResponse(
+        status_code=402,
+        content={
+            "message": "Payment required to unlock deal",
+            "deal_number": deal.deal_number,
+            "unlock_fee": deal.unlock_fee,
+            "currency": "AUD",
+            "checkout_url": checkout["checkout_url"],
+            "session_id": checkout["session_id"],
+        }
+    )
 
 
 @app.post("/refunds/request")
@@ -388,6 +527,7 @@ async def request_refund(
     Request refund under Glitch Guarantee.
     
     Users can request refund if airline cancels the fare within 48 hours.
+    Refund is processed automatically via Stripe.
     """
     deal = db.query(Deal).filter(Deal.deal_number == refund_request.deal_number.upper()).first()
     
@@ -405,6 +545,9 @@ async def request_refund(
         
     if unlock.payment_status == "refunded":
         raise HTTPException(status_code=400, detail="Already refunded")
+    
+    if not unlock.payment_id:
+        raise HTTPException(status_code=400, detail="No payment record to refund")
         
     # Check if within 48 hour window
     hours_since_unlock = (datetime.now() - unlock.unlocked_at).total_seconds() / 3600
@@ -415,14 +558,32 @@ async def request_refund(
             detail="Refund window expired (48 hours)"
         )
         
-    # Process refund
-    hubspot = HubSpotIntegration()
-    success = await hubspot.process_refund(unlock, refund_request.reason)
+    # Process refund via Stripe
+    from src.payments.stripe_checkout import issue_refund
     
-    if success:
+    try:
+        refund_result = issue_refund(
+            payment_intent_id=unlock.payment_id,
+            reason="requested_by_customer",
+        )
+        
+        unlock.payment_status = "refunded"
+        unlock.refund_requested = True
+        unlock.refund_reason = refund_request.reason
+        unlock.refunded_at = datetime.now()
+        
+        deal.total_revenue -= unlock.unlock_fee_paid
+        
         db.commit()
-        return {"status": "success", "message": "Refund processed"}
-    else:
+        
+        return {
+            "status": "success",
+            "message": "Refund processed via Glitch Guarantee",
+            "refund_id": refund_result["refund_id"],
+            "amount_refunded": refund_result["amount"],
+        }
+    except Exception as e:
+        logger.error(f"Stripe refund failed: {e}")
         raise HTTPException(status_code=500, detail="Refund processing failed")
 
 
@@ -475,8 +636,8 @@ async def hubspot_payment_webhook(
     if not all([deal_number, email, payment_id]):
         raise HTTPException(status_code=400, detail="Missing required fields")
         
-    # Process unlock
-    unlock_request = UnlockDealRequest(email=email, payment_id=payment_id)
+    # Process unlock (legacy HubSpot path)
+    unlock_request = UnlockDealRequest(email=email)
     result = await unlock_deal(deal_number, unlock_request, db)
     
     return {"status": "success", "deal": result}
@@ -529,6 +690,235 @@ async def admin_publish_deal(
         "status": "success",
         "deal_number": deal.deal_number,
         "hubspot_data": result
+    }
+
+
+# ----------------------------------------------------------------
+# Stripe Payment Endpoints
+# ----------------------------------------------------------------
+
+@app.post("/webhooks/stripe")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db_session)):
+    """
+    Stripe webhook — handles both subscriptions and one-off payments.
+
+    Events handled:
+    - checkout.session.completed → activate subscription or unlock deal
+    - invoice.payment_succeeded → renew subscription
+    - customer.subscription.deleted → deactivate subscriber
+    - charge.refunded → record refund
+    """
+    from src.payments.stripe_checkout import process_webhook_event
+    
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+    
+    event = process_webhook_event(payload, sig_header)
+    
+    if not event:
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
+
+    event_type = event["type"]
+    data_object = event["data"]["object"]
+
+    # ── CHECKOUT COMPLETED ─────────────────────────────────────────
+    if event_type == "checkout.session.completed":
+        metadata = data_object.get("metadata", {})
+        checkout_type = metadata.get("type", "deal_unlock")
+
+        # ── Subscription checkout ──
+        if checkout_type == "subscription" or data_object.get("mode") == "subscription":
+            email = metadata.get("email") or data_object.get("customer_email")
+            phone = metadata.get("phone", "")
+            stripe_customer_id = data_object.get("customer")
+            stripe_subscription_id = data_object.get("subscription")
+
+            if not email:
+                logger.error(f"Subscription webhook missing email: {metadata}")
+                return {"status": "error", "reason": "missing email"}
+
+            # Find subscriber by phone or email
+            subscriber = None
+            if phone:
+                subscriber = db.query(Subscriber).filter(
+                    Subscriber.phone_number == phone
+                ).first()
+            if not subscriber:
+                subscriber = db.query(Subscriber).filter(
+                    Subscriber.email == email
+                ).first()
+
+            if not subscriber:
+                subscriber = Subscriber(
+                    phone_number=phone,
+                    email=email,
+                    subscription_type=SubscriptionType.FREE,
+                    is_active=True,
+                )
+                db.add(subscriber)
+
+            # Activate subscription
+            subscriber.subscription_type = SubscriptionType.SMS_MONTHLY
+            subscriber.stripe_customer_id = stripe_customer_id
+            subscriber.stripe_subscription_id = stripe_subscription_id
+            subscriber.is_active = True
+            subscriber.last_payment_date = datetime.now()
+            # Set expiry 35 days out (monthly + buffer)
+            subscriber.subscription_expires_at = datetime.now() + timedelta(days=35)
+
+            db.commit()
+
+            logger.info(
+                f"🎉 NEW SUBSCRIBER: {email} ({phone}) — "
+                f"${settings.subscription_price_aud}/month"
+            )
+
+            return {"status": "subscription_activated", "email": email}
+
+        # ── Deal unlock checkout (legacy) ──
+        else:
+            session = data_object
+            if session.get("payment_status") != "paid":
+                return {"status": "ignored", "reason": "not paid"}
+
+            deal_number = metadata.get("deal_number")
+            customer_email = metadata.get("customer_email")
+            payment_intent = session.get("payment_intent")
+            amount_paid = (session.get("amount_total", 0)) / 100
+
+            if not deal_number or not customer_email:
+                logger.error(f"Stripe webhook missing metadata: {metadata}")
+                return {"status": "error", "reason": "missing metadata"}
+
+            deal = db.query(Deal).filter(Deal.deal_number == deal_number).first()
+            if not deal:
+                logger.error(f"Stripe webhook: deal {deal_number} not found")
+                return {"status": "error", "reason": "deal not found"}
+
+            existing = db.query(DealUnlock).filter(
+                DealUnlock.deal_id == deal.id,
+                DealUnlock.email == customer_email,
+            ).first()
+
+            if existing:
+                return {"status": "already_processed"}
+
+            unlock = DealUnlock(
+                deal_id=deal.id,
+                email=customer_email,
+                unlock_fee_paid=amount_paid,
+                payment_id=payment_intent,
+                payment_status="succeeded",
+                unlocked_at=datetime.now(),
+            )
+
+            deal.total_unlocks += 1
+            deal.total_revenue += amount_paid
+
+            db.add(unlock)
+            db.commit()
+
+            logger.info(
+                f"💰 PAYMENT: {customer_email} unlocked {deal_number} "
+                f"(${amount_paid} AUD) — total revenue: ${deal.total_revenue}"
+            )
+
+            return {"status": "success", "deal_number": deal_number}
+
+    # ── INVOICE PAID (subscription renewal) ────────────────────────
+    elif event_type == "invoice.payment_succeeded":
+        stripe_sub_id = data_object.get("subscription")
+        if stripe_sub_id:
+            subscriber = db.query(Subscriber).filter(
+                Subscriber.stripe_subscription_id == stripe_sub_id
+            ).first()
+            if subscriber:
+                subscriber.last_payment_date = datetime.now()
+                subscriber.subscription_expires_at = datetime.now() + timedelta(days=35)
+                subscriber.is_active = True
+                db.commit()
+                logger.info(f"🔄 Subscription renewed: {subscriber.email}")
+        return {"status": "renewal_recorded"}
+
+    # ── SUBSCRIPTION CANCELLED ─────────────────────────────────────
+    elif event_type == "customer.subscription.deleted":
+        stripe_sub_id = data_object.get("id")
+        subscriber = db.query(Subscriber).filter(
+            Subscriber.stripe_subscription_id == stripe_sub_id
+        ).first()
+        if subscriber:
+            subscriber.subscription_type = SubscriptionType.FREE
+            subscriber.is_active = False
+            subscriber.stripe_subscription_id = None
+            db.commit()
+            logger.info(f"🚫 Subscription cancelled: {subscriber.email}")
+        return {"status": "subscription_cancelled"}
+
+    # ── REFUND ─────────────────────────────────────────────────────
+    elif event_type == "charge.refunded":
+        charge = data_object
+        payment_intent = charge.get("payment_intent")
+        
+        if payment_intent:
+            unlock = db.query(DealUnlock).filter(
+                DealUnlock.payment_id == payment_intent
+            ).first()
+            
+            if unlock:
+                unlock.payment_status = "refunded"
+                unlock.refunded_at = datetime.now()
+                db.commit()
+                logger.info(f"💸 Refund recorded for {payment_intent}")
+        
+        return {"status": "refund_recorded"}
+    
+    return {"status": "ignored", "event_type": event_type}
+
+
+@app.get("/payment/success")
+async def payment_success(
+    session_id: str = Query(...),
+    db: Session = Depends(get_db_session),
+):
+    """
+    Success page after Stripe payment.
+    Returns the full deal details.
+    """
+    from src.payments.stripe_checkout import get_session_details
+    
+    session = get_session_details(session_id)
+    if not session or session["payment_status"] != "paid":
+        raise HTTPException(status_code=400, detail="Payment not confirmed")
+    
+    deal = db.query(Deal).filter(
+        Deal.deal_number == session["deal_number"]
+    ).first()
+    
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    return {
+        "status": "unlocked",
+        "deal_number": deal.deal_number,
+        "route": f"{deal.origin} → {deal.destination}",
+        "normal_price": deal.normal_price,
+        "mistake_price": deal.mistake_price,
+        "savings": f"{int(deal.savings_percentage * 100)}%",
+        "airline": deal.airline,
+        "cabin_class": deal.cabin_class,
+        "booking_link": deal.booking_link,
+        "booking_instructions": deal.booking_instructions,
+        "specific_dates": deal.specific_dates,
+        "glitch_guarantee": "48-hour refund if fare is cancelled",
+    }
+
+
+@app.get("/payment/cancelled")
+async def payment_cancelled():
+    """User cancelled the Stripe checkout."""
+    return {
+        "status": "cancelled",
+        "message": "No worries — you weren't charged. The deal is still available if you change your mind.",
     }
 
 

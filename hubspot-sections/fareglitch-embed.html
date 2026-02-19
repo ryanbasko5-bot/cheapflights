@@ -1,0 +1,135 @@
+<!--
+  FAREGLITCH HUBSPOT EMBED
+  
+  Copy this entire block into a HubSpot "Custom HTML" module
+  on your fareglitch.com.au/home page.
+  
+  What it does:
+  1. Shows a subscribe form (email + phone → $5/month Stripe checkout)
+  2. Auto-loads live deals from your API every 60 seconds
+  3. No manual copy-paste needed — deals appear automatically
+-->
+
+<!-- Subscribe Form -->
+<div id="fg-subscribe" style="max-width:480px;margin:2em auto;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+  <h2 style="text-align:center;color:#1a1a2e;margin-bottom:0.5em;">🛫 Get SMS Alerts First</h2>
+  <p style="text-align:center;color:#555;font-size:0.95em;margin-bottom:1.5em;">
+    $5/month · Unlimited alerts · 1 hour before Instagram · Cancel anytime
+  </p>
+  <form id="fg-subscribe-form" style="display:flex;flex-direction:column;gap:0.75em;">
+    <input type="email" id="fg-email" placeholder="your@email.com" required
+      style="padding:12px 16px;border:2px solid #e0e0e0;border-radius:8px;font-size:1em;outline:none;transition:border 0.2s;"
+      onfocus="this.style.borderColor='#6c63ff'" onblur="this.style.borderColor='#e0e0e0'" />
+    <input type="tel" id="fg-phone" placeholder="0412 345 678" required
+      style="padding:12px 16px;border:2px solid #e0e0e0;border-radius:8px;font-size:1em;outline:none;transition:border 0.2s;"
+      onfocus="this.style.borderColor='#6c63ff'" onblur="this.style.borderColor='#e0e0e0'" />
+    <button type="submit" id="fg-submit-btn"
+      style="padding:14px;background:linear-gradient(135deg,#6c63ff,#3f3d56);color:#fff;border:none;border-radius:8px;font-size:1.1em;font-weight:600;cursor:pointer;transition:opacity 0.2s;">
+      Start Getting Alerts →
+    </button>
+  </form>
+  <p id="fg-msg" style="text-align:center;margin-top:1em;color:#555;min-height:1.5em;"></p>
+</div>
+
+<!-- Live Deals Grid -->
+<div id="fg-deals" style="max-width:900px;margin:2em auto;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+  <h2 style="text-align:center;color:#1a1a2e;">✈️ Live Glitch Fares</h2>
+  <div id="fg-deals-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1em;margin-top:1em;">
+    <p style="text-align:center;color:#999;grid-column:1/-1;">Loading deals...</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  var API = "https://api.fareglitch.com.au";
+
+  // ── Subscribe Form ──────────────────────────────────────────────
+  var form = document.getElementById("fg-subscribe-form");
+  var msg  = document.getElementById("fg-msg");
+  var btn  = document.getElementById("fg-submit-btn");
+
+  form.addEventListener("submit", function(e) {
+    e.preventDefault();
+    var email = document.getElementById("fg-email").value.trim();
+    var phone = document.getElementById("fg-phone").value.trim();
+    if (!email || !phone) return;
+
+    btn.disabled = true;
+    btn.textContent = "Processing...";
+    msg.textContent = "";
+
+    fetch(API + "/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, phone_number: phone })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.checkout_url) {
+        msg.style.color = "#6c63ff";
+        msg.textContent = "Redirecting to checkout...";
+        window.location.href = data.checkout_url;
+      } else if (data.status === "already_subscribed") {
+        msg.style.color = "#27ae60";
+        msg.textContent = "✅ " + data.message;
+        btn.textContent = "Start Getting Alerts →";
+        btn.disabled = false;
+      } else {
+        msg.style.color = "#e74c3c";
+        msg.textContent = data.detail || "Something went wrong. Try again.";
+        btn.textContent = "Start Getting Alerts →";
+        btn.disabled = false;
+      }
+    })
+    .catch(function() {
+      msg.style.color = "#e74c3c";
+      msg.textContent = "Network error. Please try again.";
+      btn.textContent = "Start Getting Alerts →";
+      btn.disabled = false;
+    });
+  });
+
+  // Show success message if returning from Stripe
+  if (window.location.search.indexOf("subscribed=true") !== -1) {
+    msg.style.color = "#27ae60";
+    msg.textContent = "🎉 You're subscribed! You'll get SMS alerts for every deal.";
+    form.style.display = "none";
+  }
+
+  // ── Live Deals ──────────────────────────────────────────────────
+  var grid = document.getElementById("fg-deals-grid");
+
+  function loadDeals() {
+    fetch(API + "/deals/live")
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.deals || data.deals.length === 0) {
+          grid.innerHTML = '<p style="text-align:center;color:#999;grid-column:1/-1;">No active deals right now — our scanner runs every 3 hours. Check back soon!</p>';
+          return;
+        }
+        var html = "";
+        data.deals.forEach(function(d) {
+          html += '<div style="background:#fff;border-radius:12px;padding:1.2em;box-shadow:0 2px 12px rgba(0,0,0,0.08);border:1px solid #f0f0f0;">';
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+          html += '<span style="font-size:0.8em;color:#6c63ff;font-weight:600;">' + d.deal_number + '</span>';
+          html += '<span style="background:#e8fce8;color:#27ae60;padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:600;">-' + d.savings_pct + '%</span>';
+          html += '</div>';
+          html += '<h3 style="margin:0.5em 0 0.3em;font-size:1.1em;color:#1a1a2e;">' + d.route + '</h3>';
+          if (d.airline) html += '<p style="margin:0;font-size:0.85em;color:#888;">' + d.airline + ' · ' + d.cabin_class + '</p>';
+          html += '<div style="margin-top:0.8em;display:flex;align-items:baseline;gap:0.5em;">';
+          html += '<span style="font-size:1.3em;font-weight:700;color:#e74c3c;">$' + d.glitch_price + '</span>';
+          html += '<span style="text-decoration:line-through;color:#999;font-size:0.9em;">$' + d.normal_price + '</span>';
+          html += '</div>';
+          html += '</div>';
+        });
+        grid.innerHTML = html;
+      })
+      .catch(function() {
+        grid.innerHTML = '<p style="text-align:center;color:#999;grid-column:1/-1;">Unable to load deals. Please refresh.</p>';
+      });
+  }
+
+  loadDeals();
+  setInterval(loadDeals, 60000); // Refresh every 60 seconds
+})();
+</script>

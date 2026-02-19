@@ -58,11 +58,11 @@ class Settings(BaseSettings):
     price_drop_threshold: float = 0.70  # 70% drop
     min_savings_amount: int = 300  # Minimum $300 savings
     
-    # Deal Configuration (Alert Model)
-    alert_fee: float = 5.00  # Pay to receive SMS alert
-    unlock_fee_default: float = 7.00  # Default unlock fee for deals
+    # Deal Configuration (Subscription Model)
+    subscription_price_aud: float = 5.00  # $5/month subscription
     instagram_delay_hours: int = 1  # Post to Instagram 1hr after SMS
     deal_expiry_hours: int = 48
+    stripe_price_id: Optional[str] = None  # Stripe recurring price ID
     
     # SMS Configuration (Sinch)
     sinch_service_plan_id: Optional[str] = None
@@ -75,6 +75,11 @@ class Settings(BaseSettings):
     twilio_phone_number: Optional[str] = None
     your_phone_number: Optional[str] = None
     
+    # Stripe Payments
+    stripe_secret_key: Optional[str] = None
+    stripe_webhook_secret: Optional[str] = None
+    stripe_currency: str = "aud"  # Australian dollars
+
     # Feature Flags
     enable_auto_publish: bool = False
     enable_sms_alerts: bool = True
