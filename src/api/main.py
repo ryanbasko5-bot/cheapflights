@@ -518,16 +518,9 @@ async def unlock_deal(
     )
 
 
-@app.post("/refunds/request")
-async def request_refund(
-    refund_request: RefundRequest,
-    db: Session = Depends(get_db_session)
-):
+async def _process_refund(refund_request: RefundRequest, db: Session):
     """
-    Request refund under Glitch Guarantee.
-    
-    Users can request refund if airline cancels the fare within 48 hours.
-    Refund is processed automatically via Stripe.
+    Internal refund logic — shared by the public endpoint and HubSpot webhook.
     """
     deal = db.query(Deal).filter(Deal.deal_number == refund_request.deal_number.upper()).first()
     
@@ -587,14 +580,40 @@ async def request_refund(
         raise HTTPException(status_code=500, detail="Refund processing failed")
 
 
+@app.post("/refunds/request")
+async def request_refund(
+    refund_request: RefundRequest,
+    db: Session = Depends(get_db_session),
+    subscriber: Subscriber = Depends(get_current_subscriber)
+):
+    """
+    Request refund under Glitch Guarantee.
+    
+    Users can request refund if airline cancels the fare within 48 hours.
+    Refund is processed automatically via Stripe.
+    Requires JWT authentication — refund email must match authenticated user.
+    """
+    # Ensure the authenticated user matches the refund request email
+    if subscriber.email != refund_request.email:
+        raise HTTPException(
+            status_code=403,
+            detail="You can only request refunds for your own purchases"
+        )
+    return await _process_refund(refund_request, db)
+
+
 @app.get("/deals/{deal_number}/stats")
 async def get_deal_stats(
     deal_number: str,
+    request: Request,
     db: Session = Depends(get_db_session)
 ):
     """
-    Get statistics for a deal (admin only in production).
+    Get statistics for a deal. Admin only — requires Authorization: Bearer <API_SECRET_KEY>.
     """
+    auth = request.headers.get("Authorization", "")
+    if auth != f"Bearer {settings.api_secret_key}":
+        raise HTTPException(status_code=403, detail="Invalid secret key")
     deal = db.query(Deal).filter(Deal.deal_number == deal_number.upper()).first()
     
     if not deal:
@@ -618,6 +637,7 @@ async def get_deal_stats(
 
 @app.post("/webhooks/hubspot/payment-success")
 async def hubspot_payment_webhook(
+    request: Request,
     payload: dict,
     db: Session = Depends(get_db_session)
 ):
@@ -625,7 +645,12 @@ async def hubspot_payment_webhook(
     Webhook endpoint for HubSpot payment success.
     
     HubSpot will call this when a payment is completed.
+    Requires Authorization: Bearer <API_SECRET_KEY> header.
     """
+    auth = request.headers.get("Authorization", "")
+    if auth != f"Bearer {settings.api_secret_key}":
+        raise HTTPException(status_code=403, detail="Invalid webhook secret")
+
     # Extract payment info from HubSpot webhook payload
     # Payload structure depends on HubSpot Commerce Hub configuration
     
@@ -645,6 +670,7 @@ async def hubspot_payment_webhook(
 
 @app.post("/webhooks/hubspot/refund-request")
 async def hubspot_refund_webhook(
+    request: Request,
     payload: dict,
     db: Session = Depends(get_db_session)
 ):
@@ -652,7 +678,11 @@ async def hubspot_refund_webhook(
     Webhook endpoint for HubSpot refund requests.
     
     Triggered when support ticket is created for refund.
+    Requires Authorization: Bearer <API_SECRET_KEY> header.
     """
+    auth = request.headers.get("Authorization", "")
+    if auth != f"Bearer {settings.api_secret_key}":
+        raise HTTPException(status_code=403, detail="Invalid webhook secret")
     email = payload.get("email")
     deal_number = payload.get("deal_number")
     reason = payload.get("reason", "Airline canceled fare")
@@ -663,19 +693,24 @@ async def hubspot_refund_webhook(
         reason=reason
     )
     
-    return await request_refund(refund_request, db)
+    return await _process_refund(refund_request, db)
 
 
-# Admin Endpoints (would be protected in production)
+# Admin Endpoints (protected by API_SECRET_KEY)
 
 @app.post("/admin/deals/{deal_id}/publish")
 async def admin_publish_deal(
     deal_id: int,
+    request: Request,
     db: Session = Depends(get_db_session)
 ):
     """
     Manually publish a deal to HubSpot.
+    Requires Authorization: Bearer <API_SECRET_KEY>
     """
+    auth = request.headers.get("Authorization", "")
+    if auth != f"Bearer {settings.api_secret_key}":
+        raise HTTPException(status_code=403, detail="Invalid secret key")
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
     
     if not deal:
@@ -1030,7 +1065,10 @@ async def trigger_scan(
 
 @app.get("/admin/budget")
 async def api_budget(request: Request):
-    """Check your Amadeus API call budget (no auth needed — read only)."""
+    """Check Amadeus API call budget. Requires Authorization: Bearer <API_SECRET_KEY>."""
+    auth = request.headers.get("Authorization", "")
+    if auth != f"Bearer {settings.api_secret_key}":
+        raise HTTPException(status_code=403, detail="Invalid secret key")
     _track_api_budget()
     return {
         "calls_today": _api_calls_today,
@@ -1156,7 +1194,7 @@ async def start_auto_scanner():
 
         _scanner_task = asyncio.create_task(_auto_scan_loop())
         logger.info(
-            "⏰ Auto-scanner: ALL 26 airports every 3 hours (8x/day), "
+            "⏰ Auto-scanner: 7 airports per batch, every 6 hours (4x/day), "
             f"budget cap {DAILY_BUDGET}/day {FREE_MONTHLY_LIMIT}/month"
         )
     else:
